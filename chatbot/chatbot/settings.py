@@ -123,3 +123,16 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MEDIA_URL = '/images/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'evidence')
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': "dyf3windv",
+    'API_KEY': "REDACTED",
+    'API_SECRET': "REDACTED",
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+CLOUDINARY_URL="cloudinary://REDACTED:REDACTED@dyf3windv"
