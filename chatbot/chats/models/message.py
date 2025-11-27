@@ -7,3 +7,6 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     content = models.TextField(validators=[MinValueValidator(3),MaxLengthValidator(200)])
     isPrompt = models.BooleanField()
+
+    def __str__(self):
+        return self.content

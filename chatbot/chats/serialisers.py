@@ -11,15 +11,18 @@ class UserSerialiser(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create(**validated_data)
         return user
-    
-class ConversationSerialiser(serializers.ModelSerializer):
-    class Meta:
-        model = Conversation
-        fields = ["id","title","created_at","user"]
-        extra_kwargs = {"user":{"read_only":True}}
+
 
 class MessageSerialiser(serializers.ModelSerializer):
+
     class Meta:
         model = Message
         fields = ["id", "conversation", "content", "isPrompt", "created_at"]
+
+class ConversationSerialiser(serializers.ModelSerializer):
+    messages = MessageSerialiser(many=True, read_only=True)
+    class Meta:
+        model = Conversation
+        fields = ["id","title","created_at","user_identity"]
+        extra_kwargs = {"user":{"read_only":True}}
     
