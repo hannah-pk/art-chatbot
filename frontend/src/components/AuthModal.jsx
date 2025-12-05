@@ -34,7 +34,22 @@ function AuthModal({ isOpen, onClose, onSuccess }) {
             onSuccess()
             onClose()
         } catch (err) {
-            setError(err.response?.data?.detail || "An error occurred")
+            const data = err.response?.data
+            if (!data) {
+                setError(err.message || "An error occurred")
+            } else if (typeof data === 'string') {
+                setError(data)
+            } else if (data.detail) {
+                setError(data.detail)
+            } else {
+                // Build a readable string from field errors
+                const parts = []
+                Object.entries(data).forEach(([k, v]) => {
+                    if (Array.isArray(v)) parts.push(`${k}: ${v.join(', ')}`)
+                    else parts.push(`${k}: ${v}`)
+                })
+                setError(parts.join(' | '))
+            }
         } finally {
             setLoading(false)
         }

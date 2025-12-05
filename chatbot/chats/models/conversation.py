@@ -1,8 +1,8 @@
 from django.db import models
 
 class Conversation(models.Model):
-    title = models.CharField(max_length=100)
-    user_identity = models.CharField(max_length=100, db_index=True)
+    title = models.CharField(max_length=100, default="New Conversation")
+    user_identity = models.CharField(max_length=100, db_index=True, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

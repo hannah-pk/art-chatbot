@@ -13,6 +13,13 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerialiser
     permission_classes = [AllowAny]
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            # log serializer errors for debugging registration failures
+            print("Register serializer errors:", serializer.errors)
+        return super().create(request, *args, **kwargs)
 
 class ConversationListView(generics.ListCreateAPIView):
     serializer_class = ConversationSerialiser
