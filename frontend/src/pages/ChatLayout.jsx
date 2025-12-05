@@ -113,6 +113,7 @@ function ChatLayout() {
                 onSuccess={handleAuthSuccess}
             />
 
+            {isAuthenticated && (
             <aside className="sidebar">
                 <div className="sidebar-header">
                     <h1>Conversations</h1>
@@ -145,20 +146,21 @@ function ChatLayout() {
                     </div>
                 )}
 
-                <div className="sidebar-footer">
+            </aside>
+            )}
+
+            <main className={`chat-main ${isAuthenticated ? '' : 'anon'}`}>
+                <div className="top-action">
                     {isAuthenticated ? (
-                        <button onClick={handleLogout} className="auth-btn logout-btn">
+                        <button onClick={handleLogout} className="auth-btn small logout-btn">
                             Logout
                         </button>
                     ) : (
-                        <button onClick={() => setAuthModalOpen(true)} className="auth-btn login-btn">
+                        <button onClick={() => setAuthModalOpen(true)} className="auth-btn small login-btn">
                             Login / Register
                         </button>
                     )}
                 </div>
-            </aside>
-
-            <main className="chat-main">
                 <div className="messages-container">
                     {messages.length === 0 && !conv_id ? (
                         <div className="welcome">
