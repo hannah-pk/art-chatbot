@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import api from "../api"
 import AuthModal from "../components/AuthModal"
@@ -8,6 +8,7 @@ import "../styles/ChatLayout.css"
 function ChatLayout() {
     const { conv_id } = useParams()
     const navigate = useNavigate()
+    const messagesEndRef = useRef(null)
     const [conversations, setConversations] = useState([])
     const [messages, setMessages] = useState([])
     const [content, setContent] = useState("")
@@ -16,6 +17,14 @@ function ChatLayout() {
     const [conversationsLoading, setConversationsLoading] = useState(true)
     const [authModalOpen, setAuthModalOpen] = useState(false)
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem(ACCESS_TOKEN))
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+
+    useEffect(() => {
+        scrollToBottom()
+    }, [messages])
 
     useEffect(() => {
         getConversations()
@@ -51,14 +60,11 @@ function ChatLayout() {
     }
 
     const createNewConversation = async () => {
-        try {
-            const response = await api.post("/api/conversations/", { title: "New Conversation" })
-            setConversations([response.data, ...conversations])
-            navigate(`/chat/${response.data.id}`)
-        } catch (err) {
-            setError("Failed to create conversation")
-            console.error(err)
-        }
+        // Do not create a conversation on the server yet.
+        // Just clear local messages and navigate to the empty conversation view.
+        setMessages([])
+        setContent("")
+        navigate(`/chat`)
     }
 
     const sendMessage = async (e) => {
@@ -177,6 +183,7 @@ function ChatLayout() {
                                     </div>
                                 </div>
                             ))}
+                            <div ref={messagesEndRef} />
                         </div>
                     )}
                 </div>

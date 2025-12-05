@@ -25,11 +25,12 @@ class MessageSerialiser(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ["id", "conversation", "content", "isPrompt", "created_at"]
+        extra_kwargs = {"conversation": {"read_only": True}}
 
 class ConversationSerialiser(serializers.ModelSerializer):
     messages = MessageSerialiser(many=True, read_only=True)
     class Meta:
         model = Conversation
-        fields = ["id","title","created_at","user_identity"]
+        fields = ["id","title","created_at","user_identity","messages"]
         extra_kwargs = {"user_identity": {"read_only": True}}
     

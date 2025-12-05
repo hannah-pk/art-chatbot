@@ -50,6 +50,8 @@ class MessageCreateView(generics.CreateAPIView):
         
         # Save user's message
         serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print("Message serializer errors:", serializer.errors)
         serializer.is_valid(raise_exception=True)
         serializer.save(conversation=conversation, isPrompt=True)
         
