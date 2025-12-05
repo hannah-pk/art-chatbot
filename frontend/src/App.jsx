@@ -1,40 +1,27 @@
-
 import React from "react"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import Register from "./pages/Register"
-import Login from "./pages/Login"
-import Conversation from "./pages/Conversation"
-import ConversationList from "./pages/ConversationList"
+import ChatLayout from "./pages/ChatLayout"
 import NotFound from "./pages/NotFound"
-import ProtectedRoute from "./components/ProtectedRoute"
-
-function Logout(){
-  localStorage.clear()
-  return <Navigate to="/" />
-
-}
-
-function RegisterClear(){
-  localStorage.clear()
-  return <Register />
-}
 
 function App() {
-
   return (
     <BrowserRouter>
       <Routes>
         <Route
-          path = "/"
-          element = {<Conversation/>}
+          path="/"
+          element={<Navigate to="/chat" />}
         />
-        <Route 
-          path = "/logout"
-          element = {<Logout/>}
+        <Route
+          path="/chat"
+          element={<ChatLayout />}
         />
-        <Route 
-          path = "*"
-          element = {<NotFound />}
+        <Route
+          path="/chat/:conv_id"
+          element={<ChatLayout />}
+        />
+        <Route
+          path="*"
+          element={<NotFound />}
         />
       </Routes>
     </BrowserRouter>

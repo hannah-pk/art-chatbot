@@ -24,5 +24,5 @@ class ConversationSerialiser(serializers.ModelSerializer):
     class Meta:
         model = Conversation
         fields = ["id","title","created_at","user_identity"]
-        extra_kwargs = {"user":{"read_only":True}}
+        extra_kwargs = {"user_identity": {"read_only": True}}
     

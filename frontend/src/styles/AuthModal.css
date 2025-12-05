@@ -1,0 +1,139 @@
+.auth-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.auth-modal {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+}
+
+.auth-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.auth-modal-close:hover {
+    color: #333;
+}
+
+.auth-modal-content {
+    padding: 32px;
+}
+
+.auth-modal-content h2 {
+    margin: 0 0 24px 0;
+    font-size: 24px;
+    color: #333;
+    text-align: center;
+}
+
+.auth-error {
+    padding: 12px;
+    margin-bottom: 16px;
+    background-color: #ffebee;
+    color: #c62828;
+    border-radius: 6px;
+    border: 1px solid #ef5350;
+    font-size: 14px;
+}
+
+.auth-modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.auth-modal-content input {
+    padding: 12px;
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.auth-modal-content input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.auth-modal-content input:disabled {
+    background-color: #f5f5f5;
+    color: #999;
+}
+
+.auth-modal-content button[type="submit"] {
+    padding: 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 8px;
+}
+
+.auth-modal-content button[type="submit"]:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+.auth-modal-content button[type="submit"]:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.auth-modal-footer {
+    text-align: center;
+    margin-top: 16px;
+}
+
+.auth-modal-footer p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.auth-modal-link {
+    background: none;
+    border: none;
+    color: #4CAF50;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.auth-modal-link:hover {
+    color: #45a049;
+}
