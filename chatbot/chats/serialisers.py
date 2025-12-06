@@ -33,4 +33,9 @@ class ConversationSerialiser(serializers.ModelSerializer):
         model = Conversation
         fields = ["id","title","created_at","user_identity","messages"]
         extra_kwargs = {"user_identity": {"read_only": True}}
+
+    def update(self, instance, validated_data):
+        instance.title = validated_data.get("title", instance.title)
+        instance.save()
+        return instance
     

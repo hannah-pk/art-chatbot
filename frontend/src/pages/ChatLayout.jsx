@@ -75,6 +75,7 @@ function ChatLayout() {
 
         try {
             setLoading(true)
+            setError(null)
             
             // If no conversation exists yet, create one first
             if (!currentConvId) {
@@ -111,6 +112,37 @@ function ChatLayout() {
         getConversations()
     }
 
+    const [menuOpenId, setMenuOpenId] = useState(null)
+
+    const handleRenameConversation = async (convId) => {
+        const newTitle = window.prompt("Enter new title for the conversation:", conversations.find(c=>c.id===convId)?.title || "")
+        if (!newTitle || !newTitle.trim()) return
+        try {
+            const res = await api.patch(`/api/conversations/${convId}/`, { title: newTitle.trim() })
+            setConversations(conversations.map(c => c.id === convId ? res.data : c))
+            setMenuOpenId(null)
+        } catch (err) {
+            console.error("Failed to rename conversation", err)
+            setError("Failed to rename conversation")
+        }
+    }
+
+    const handleDeleteConversation = async (convId) => {
+        if (!window.confirm("Delete this conversation? This cannot be undone.")) return
+        try {
+            await api.delete(`/api/conversations/${convId}/delete/`)
+            setConversations(conversations.filter(c => c.id !== convId))
+            setMenuOpenId(null)
+            if (String(convId) === String(conv_id)) {
+                navigate('/chat')
+                setMessages([])
+            }
+        } catch (err) {
+            console.error("Failed to delete conversation", err)
+            setError("Failed to delete conversation")
+        }
+    }
+
     return (
         <div className="chat-layout">
             <AuthModal
@@ -122,7 +154,6 @@ function ChatLayout() {
             {isAuthenticated && (
             <aside className="sidebar">
                 <div className="sidebar-header">
-                    <h1>Conversations</h1>
                     <button onClick={createNewConversation} className="new-chat-btn">
                         + New Chat
                     </button>
@@ -138,13 +169,31 @@ function ChatLayout() {
                                 {conversations.map((conv) => (
                                     <li
                                         key={conv.id}
-                                        className={conv_id === conv.id ? "active" : ""}
+                                        className={String(conv_id) === String(conv.id) ? "active" : ""}
                                         onClick={() => navigate(`/chat/${conv.id}`)}
                                     >
                                         <span className="title">{conv.title}</span>
                                         <span className="date">
                                             {new Date(conv.created_at).toLocaleDateString()}
                                         </span>
+
+                                        <button
+                                            className="conv-menu-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setMenuOpenId(menuOpenId === conv.id ? null : conv.id)
+                                            }}
+                                            aria-label="Conversation menu"
+                                        >
+                                            ⋯
+                                        </button>
+
+                                        {menuOpenId === conv.id && (
+                                            <div className="conv-menu" onClick={(e)=>e.stopPropagation()}>
+                                                <button onClick={() => handleRenameConversation(conv.id)}>Rename</button>
+                                                <button onClick={() => handleDeleteConversation(conv.id)}>Delete</button>
+                                            </div>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
@@ -178,7 +227,6 @@ function ChatLayout() {
                             {messages.map((msg, idx) => (
                                 <div key={idx} className={`message ${msg.isPrompt ? "user" : "bot"}`}>
                                     <div className="message-content">
-                                        <strong>{msg.isPrompt ? "You" : "Bot"}:</strong>
                                         <p>{msg.content}</p>
                                     </div>
                                 </div>

@@ -32,6 +32,33 @@ class ConversationListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         user_identity = get_identity(self.request)
         serializer.save(user_identity=user_identity)
+
+class ConversationDeleteView(generics.DestroyAPIView):
+    serializer_class = ConversationSerialiser
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Conversation.objects.filter(user_identity=get_identity(self.request))
+
+    def delete(self, request, *args, **kwargs):
+        conversation = get_object_or_404(Conversation, id=self.kwargs['conv_id'])
+        self.perform_destroy(conversation)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ConversationUpdateView(generics.UpdateAPIView):
+    serializer_class = ConversationSerialiser
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Conversation.objects.filter(user_identity=get_identity(self.request))
+
+    def patch(self, request, *args, **kwargs):
+        conversation = get_object_or_404(Conversation, id=self.kwargs['conv_id'], user_identity=get_identity(request))
+        serializer = self.get_serializer(conversation, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
 class MessageListView(generics.ListAPIView):
     serializer_class = MessageSerialiser
