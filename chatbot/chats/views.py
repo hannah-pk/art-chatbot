@@ -5,7 +5,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from .serialisers import UserSerialiser, ConversationSerialiser, MessageSerialiser
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .helpers import get_identity, get_or_create_conversation
+from .helpers import get_identity
 from .tasks import get_response
 
 # Create your views here.
@@ -65,7 +65,9 @@ class MessageListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        conversation = get_or_create_conversation(self.request, conv_id=self.kwargs['conv_id'])
+        # Only allow access if the conversation belongs to the current identity
+        identity = get_identity(self.request)
+        conversation = get_object_or_404(Conversation, id=self.kwargs['conv_id'], user_identity=identity)
         return Message.objects.filter(conversation=conversation)
     
 class MessageCreateView(generics.CreateAPIView):
@@ -73,18 +75,20 @@ class MessageCreateView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        conversation = get_or_create_conversation(self.request, conv_id=self.kwargs['conv_id'])
-        
+        identity = get_identity(self.request)
+        conv_id = self.kwargs['conv_id']
+        conversation = get_object_or_404(Conversation, id=conv_id, user_identity=identity)
+
         # Save user's message
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             print("Message serializer errors:", serializer.errors)
         serializer.is_valid(raise_exception=True)
         serializer.save(conversation=conversation, isPrompt=True)
-        
+
         # Get AI response
         response = get_response(request.data.get("content"))
-        
+
         # Save AI response
         response_message = Message(
             conversation=conversation,
@@ -92,7 +96,7 @@ class MessageCreateView(generics.CreateAPIView):
             isPrompt=False,
         )
         response_message.save()
-        
+
         headers = self.get_success_headers(serializer.data)
         return Response(
             {

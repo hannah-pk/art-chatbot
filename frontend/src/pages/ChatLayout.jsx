@@ -55,6 +55,13 @@ function ChatLayout() {
             const response = await api.get(`/api/chat/${conv_id}/`)
             setMessages(response.data)
         } catch (err) {
+            if (err?.response?.status === 404) {
+                setError("Conversation does not exist.")
+                setMessages([])
+                navigate('/chat')
+            } else {
+                setError("Failed to load messages")
+            }
             console.error("Failed to load messages", err)
         }
     }
@@ -76,7 +83,7 @@ function ChatLayout() {
         try {
             setLoading(true)
             setError(null)
-            
+
             // If no conversation exists yet, create one first
             if (!currentConvId) {
                 const convResponse = await api.post("/api/conversations/", { title: "New Conversation" })
@@ -94,7 +101,14 @@ function ChatLayout() {
             ])
             setContent("")
         } catch (err) {
-            setError("Failed to send message")
+            // If conversation is gone (404), show warning and redirect to empty chat
+            if (err?.response?.status === 404) {
+                setError("This conversation no longer exists. You have been redirected to a new chat.")
+                setMessages([])
+                navigate('/chat')
+            } else {
+                setError("Failed to send message")
+            }
             console.error(err)
         } finally {
             setLoading(false)
@@ -110,6 +124,8 @@ function ChatLayout() {
     const handleAuthSuccess = () => {
         setIsAuthenticated(true)
         getConversations()
+        setMessages([])
+        navigate('/chat')
     }
 
     const [menuOpenId, setMenuOpenId] = useState(null)

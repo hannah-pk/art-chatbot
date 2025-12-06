@@ -164,3 +164,6 @@ MESSAGE_TAGS = {
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# Number of days after which anonymous conversations are considered stale and removed
+# Can be overridden via environment variable ANON_CONVERSATION_EXPIRY_DAYS
