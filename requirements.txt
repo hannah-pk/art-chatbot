@@ -11,3 +11,4 @@ python-dotenv
 sentence-transformers
 hf_xet
 torch
+nltk
