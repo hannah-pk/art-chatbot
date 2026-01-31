@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from .serialisers import UserSerialiser, ConversationSerialiser, MessageSerialiser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .helpers import get_identity
-from .tasks import get_response
+from .tasks import process_request
 
 # Create your views here.
 class RegisterView(generics.CreateAPIView):
@@ -87,7 +87,7 @@ class MessageCreateView(generics.CreateAPIView):
         serializer.save(conversation=conversation, isPrompt=True)
 
         # Get AI response
-        response = get_response(request.data.get("content"))
+        response = process_request(request.data.get("content"))
 
         # Save AI response
         response_message = Message(

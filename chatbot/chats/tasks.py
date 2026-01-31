@@ -5,6 +5,15 @@ from nltk import pos_tag, word_tokenize
 
 #stop_words = set(stopwords.words('english'))
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
+MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+
+example_data = torch.load('../embeddings/intent.pt')
+example_labels = example_data['labels']
+example_embeddings = example_data['embeddings']
+
+mood_data = torch.load('../embeddings/mood.pt')
+mood_labels = example_data['labels']
+mood_embeddings = example_data['embeddings']
 
 def filter_common_words(text):
     words = text.lower().split()
@@ -16,40 +25,6 @@ def extract_relevant_words(text):
     tagged = pos_tag(tokens)
     relevant_words = [word for word, tag in tagged if tag in KEEP_TAGS]
     return ' '.join(relevant_words)
-
-INTENTS= {
-    "colour_palette":["Please generate a colour palette based off this image", "Create a colour palette around the theme of spring", "Give me a colour scheme for a fight scene"],
-    "edit_image":["Could you make the shadows more intense and sad?", "Please enhance the brightness and contrast of this image", "Can you add a vignette effect to this photo?", "Make the colors more vibrant and saturated", "This image looks a bit flat, how can i fix it?"],
-}
-
-MOODS = {
-    "happy": ["bright", "vibrant", "cheerful", "lively", "joyful", "jubilant", "merry"],
-    "sad": ["muted", "dark", "somber", "gloomy", "dull", "melancholy", "depressing", "dreary", "wistful"],
-    "angry": ["intense", "fiery", "bold", "aggressive", "strong", "striking", "cantankerous", "fierce"],
-    "calm": ["soft", "pastel", "tranquil", "peaceful", "serene", "soothing", "relaxing", "gentle"],
-}
-
-MODEL = SentenceTransformer('all-MiniLM-L6-v2')
-
-examples = []
-example_to_intent = []
-
-for intent, example_list in INTENTS.items():
-    for example in example_list:
-        examples.append(example)
-        example_to_intent.append(intent)
-
-example_embeddings = MODEL.encode(examples,normalize_embeddings=True)
-
-mood_names = []
-mood_embeddings = []
-
-for mood, synonyms in MOODS.items():
-    emb= MODEL.encode(synonyms,normalize_embeddings=True, convert_to_tensor=True)
-    centroid = emb.mean(dim=0)
-    mood_embeddings.append(centroid)
-    mood_names.append(mood)
-mood_embeddings = torch.stack(mood_embeddings)
 
 def get_response(message):
     temp_response = "responding to " + message
@@ -63,7 +38,7 @@ def process_request(message):
     best_score = scores[best_idx].item()
 
     if best_score >= threshold:
-        return example_to_intent[best_idx]
+        return example_labels[best_idx]
 
     response = get_response(message)
     return response
@@ -80,7 +55,7 @@ def deduce_mood(message):
         word_scores = util.cos_sim(word_embedding, mood_embeddings)[0]
         best_idx = word_scores.argmax().item()
         best_score = word_scores[best_idx].item()
-        best_mood = mood_names[best_idx]
+        best_mood = mood_labels[best_idx]
         if best_score >= max(threshold,highscore):
             mood = best_mood
             highscore = best_score
@@ -93,6 +68,3 @@ def deduce_mood(message):
         return best_mood """
     return mood
 
-while True:
-    i = input("Enter your message: ")
-    print(deduce_mood(i))
