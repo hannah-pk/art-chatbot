@@ -34,13 +34,34 @@ def get_response(message):
     temp_response = "responding to " + message
     return temp_response
 
-def process_request(message,conv_id):
-    r = Request.objects.get_or_create(conversation_id=conv_id)
-    instruction = deduce_instruction(message)
+def clarifying_response(self):
+    return "Sorry, I'm entirely sure what you are trying to ask for. Please could you rephrase your request in a way that I might understand?"
 
-    return instruction
+def clarify_params(self,instruction,params):
+    pass
 
-def perform_instruction(instructions, params):
+def process_request(message,conv):
+    message_embedding = MODEL.encode([message],normalize_embeddings=True)
+    if not Request.objects.filter(conversation=conv).exists():
+        r = Request.objects.create(conversation=conv)
+        instruction = deduce_instruction(message)
+        if instruction is None:
+            return clarifying_response()
+        r.set_instruction(instruction)
+        image_needed = deduce_image_needed(message_embedding,r)
+        r.set_image_needed(image_needed)
+        mood = deduce_mood(message)
+        r.add_params('mood',mood)
+
+    r = Request.objects.get(conversation=conv)
+    if r.has_enough_params():
+        return perform_instruction(r.instruction,r.params)
+    else:
+        pass
+
+
+
+def perform_instruction(instruction, params):
     pass
 
 def deduce_instruction(self,message):
@@ -52,17 +73,28 @@ def deduce_instruction(self,message):
 
     if best_score >= threshold:
         return example_labels[best_idx]
-    return "unknown"
+    return None
 
-def deduce_params(self,message):
-    pass
+def deduce_image_needed(msg_embedding,request):
+    if request.instruction == "edit_image":
+        return True
+    threshold = 0.6
+    image_needed = False
+    img_scores = util.cos_sim(msg_embedding,image_param_embeddings)[0]
+    best_idx = img_scores.argmax().item()
+    best_score = img_scores[best_idx].item()
+
+    if best_score >= threshold:
+        image_needed = True
+    return image_needed
+
 
 def deduce_mood(message):
     threshold = 0.5
     filtered_message = extract_relevant_words(message)
     print(filtered_message)
     words = filtered_message.split()
-    mood = 'unknown'
+    mood = None
     highscore = 0
     for word in words:
         word_embedding = MODEL.encode([word],normalize_embeddings=True)
@@ -81,4 +113,10 @@ def deduce_mood(message):
     if scores[best_idx].item() >= threshold:
         return best_mood """
     return mood
+
+def colour_palette(mood,image=None,number=5):
+    pass
+
+def edit_image(image,mood):
+    pass
 

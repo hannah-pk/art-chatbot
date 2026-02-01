@@ -9,11 +9,11 @@ target_params = {
 
 class Request(models.Model):
     conversation = models.OneToOneField(Conversation, on_delete=models.CASCADE,related_name='request')
-    instruction = models.TextField(validators=[MinLengthValidator(3), MaxLengthValidator(200)])
+    instruction = models.TextField(validators=[MinLengthValidator(3), MaxLengthValidator(200)],null=True,blank=True)
     needs_image = models.BooleanField(default=False)
     params = models.JSONField()
 
-    def set_instructions(self,new_instruction):
+    def set_instruction(self,new_instruction):
         self.instruction = new_instruction
         self.save()
 
@@ -21,11 +21,17 @@ class Request(models.Model):
         self.params[param_name] = param
         self.save()
 
+    def set_image_needed(self,value):
+        self.needs_image = value
+        self.save()
+
     def has_enough_params(self):
-        if self.instruction=="colour_palette":
-            if 'mood' in self.params.keys:
-                mood = self.params['mood']
-            if 'image' in self.params.keys:
-                image = self.params['image']
+        mood = self.params['mood']
+        if mood is None:
+            return False
+        if self.needs_image:
+            if 'image' not in self.params.keys:
+                return False
+        return True
 
     
