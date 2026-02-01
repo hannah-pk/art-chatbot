@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import api from "../api"
 
@@ -11,6 +11,7 @@ function Conversation(){
     const [imagePreview, setImagePreview] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const textInputRef = useRef(null)
 
     useEffect(() => {
         if (conv_id) {
@@ -69,6 +70,7 @@ function Conversation(){
             ])
             setContent("")
             clearImage()
+            textInputRef.current?.focus()
         } catch (err) {
             setError("Failed to send message")
             console.error(err)
@@ -102,6 +104,7 @@ function Conversation(){
             <form onSubmit={sendMessage} style={{ marginTop: "10px" }}>
                 <div style={{ marginBottom: "10px" }}>
                     <input
+                        ref={textInputRef}
                         type="text"
                         value={content}
                         onChange={(e) => setContent(e.target.value)}

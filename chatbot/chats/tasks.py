@@ -37,10 +37,10 @@ def get_response(message):
     temp_response = "responding to " + message
     return temp_response
 
-def clarifying_response(self):
+def clarifying_response():
     return "Sorry, I'm entirely sure what you are trying to ask for. Please could you rephrase your request in a way that I might understand?"
 
-def clarify_params(self,param):
+def clarify_params(param):
     if param == 'mood':
         return "Could you give further detail on the kind of mood or atmosphere you're hoping to achieve?"
     elif param == 'image':
@@ -62,16 +62,16 @@ def process_request(message, conv, image_file=None):
     """
     message_embedding = MODEL.encode([message], normalize_embeddings=True)
     
-    if not Request.objects.filter(conversation=conv).exists():
-        r = Request.objects.create(conversation=conv)
+    r = Request.objects.get_or_create(conversation=conv)[0]
+    instruction= r.instruction
+    if instruction is None:
         instruction = deduce_instruction(message)
-        if instruction is None:
+        if instruction is None: #if instruction is still None after trying to deduce the instruction
             return clarifying_response()
-        r.set_instruction(instruction)
-        image_needed = deduce_image_needed(message_embedding, r)
-        r.set_image_needed(image_needed)
+    r.set_instruction(instruction)
+    image_needed = deduce_image_needed(message_embedding, r)
+    r.set_image_needed(image_needed)
 
-    r = Request.objects.get(conversation=conv)
     mood = deduce_mood(message)
     r.add_params('mood', mood)
     
@@ -96,9 +96,14 @@ def process_request(message, conv, image_file=None):
 
 
 def perform_instruction(instruction, params):
-    pass
+    if instruction=="edit_image":
+        return edit_image(**params)
+    elif instruction=="colour_palette":
+        return colour_palette(**params)
+    else:
+        return instruction
 
-def deduce_instruction(self,message):
+def deduce_instruction(message):
     threshold = 0.6
     message_embedding = MODEL.encode([message],normalize_embeddings=True)
     scores = util.cos_sim(message_embedding, example_embeddings)[0]

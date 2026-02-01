@@ -11,7 +11,7 @@ class Request(models.Model):
     conversation = models.OneToOneField(Conversation, on_delete=models.CASCADE,related_name='request')
     instruction = models.TextField(validators=[MinLengthValidator(3), MaxLengthValidator(200)],null=True,blank=True)
     needs_image = models.BooleanField(default=False)
-    params = models.JSONField()
+    params = models.JSONField(default=dict,blank=True)
 
     def set_instruction(self,new_instruction):
         self.instruction = new_instruction
@@ -30,7 +30,7 @@ class Request(models.Model):
         if mood is None:
             return 'mood'
         if self.needs_image:
-            if 'image' not in self.params.keys:
+            if 'image' not in self.params.keys():
                 return 'image'
         return None
 
