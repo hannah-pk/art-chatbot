@@ -87,7 +87,7 @@ class MessageCreateView(generics.CreateAPIView):
         serializer.save(conversation=conversation, isPrompt=True)
 
         # Get AI response
-        response = process_request(request.data.get("content"))
+        response = process_request(request.data.get("content"),conversation)
 
         # Save AI response
         response_message = Message(

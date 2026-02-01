@@ -18,6 +18,10 @@ MOODS = {
     "calm": ["soft", "pastel", "tranquil", "peaceful", "serene", "soothing", "relaxing", "gentle"],
 }
 
+IMAGE_REQUESTS = ["Please generate a colour palette based off this image", "How can i make this drawing look more cheerful?", ]
+    
+
+
 class Command(BaseCommand):
     help = 'Train the language model for the chatbot and save the required models into external files'
 
@@ -61,3 +65,15 @@ class Command(BaseCommand):
         },
         os.path.join(output_dir,'mood.pt')
         )
+
+        image_param_embeddings = MODEL.encode(IMAGE_REQUESTS, normalize_embeddings=True,convert_to_tensor=True)
+        image_param_embeddings = torch.stack(image_param_embeddings)
+
+        torch.save({
+            'embeddings': image_param_embeddings,
+            'model': 'all-MiniLM-L6-v2',
+            'type': 'image_requests',
+        },
+        os.path.join(output_dir,'image.pt')
+        )
+

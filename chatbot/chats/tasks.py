@@ -1,6 +1,7 @@
 from sentence_transformers import SentenceTransformer, util
 import torch
 from nltk import pos_tag, word_tokenize
+from chats.models import Request
 #from nltk.corpus import stopwords
 
 #stop_words = set(stopwords.words('english'))
@@ -12,8 +13,11 @@ example_labels = example_data['labels']
 example_embeddings = example_data['embeddings']
 
 mood_data = torch.load('../embeddings/mood.pt')
-mood_labels = example_data['labels']
-mood_embeddings = example_data['embeddings']
+mood_labels = mood_data['labels']
+mood_embeddings = mood_data['embeddings']
+
+image_param_data = torch.load('../embeddings/image.pt')
+image_param_embeddings = image_param_data['embeddings']
 
 def filter_common_words(text):
     words = text.lower().split()
@@ -30,7 +34,16 @@ def get_response(message):
     temp_response = "responding to " + message
     return temp_response
 
-def process_request(message):
+def process_request(message,conv_id):
+    r = Request.objects.get_or_create(conversation_id=conv_id)
+    instruction = deduce_instruction(message)
+
+    return instruction
+
+def perform_instruction(instructions, params):
+    pass
+
+def deduce_instruction(self,message):
     threshold = 0.6
     message_embedding = MODEL.encode([message],normalize_embeddings=True)
     scores = util.cos_sim(message_embedding, example_embeddings)[0]
@@ -39,9 +52,10 @@ def process_request(message):
 
     if best_score >= threshold:
         return example_labels[best_idx]
+    return "unknown"
 
-    response = get_response(message)
-    return response
+def deduce_params(self,message):
+    pass
 
 def deduce_mood(message):
     threshold = 0.5
