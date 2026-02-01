@@ -11,15 +11,15 @@ import numpy as np
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
 MODEL = SentenceTransformer('all-MiniLM-L6-v2')
 
-example_data = torch.load('../embeddings/intent.pt')
+example_data = torch.load('embeddings/intent.pt',weights_only=False)
 example_labels = example_data['labels']
 example_embeddings = example_data['embeddings']
 
-mood_data = torch.load('../embeddings/mood.pt')
+mood_data = torch.load('embeddings/mood.pt',weights_only=False)
 mood_labels = mood_data['labels']
 mood_embeddings = mood_data['embeddings']
 
-image_param_data = torch.load('../embeddings/image.pt')
+image_param_data = torch.load('embeddings/image.pt',weights_only=False)
 image_param_embeddings = image_param_data['embeddings']
 
 def filter_common_words(text):

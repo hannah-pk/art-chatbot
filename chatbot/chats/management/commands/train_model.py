@@ -67,7 +67,6 @@ class Command(BaseCommand):
         )
 
         image_param_embeddings = MODEL.encode(IMAGE_REQUESTS, normalize_embeddings=True,convert_to_tensor=True)
-        image_param_embeddings = torch.stack(image_param_embeddings)
 
         torch.save({
             'embeddings': image_param_embeddings,
