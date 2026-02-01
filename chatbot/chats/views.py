@@ -84,12 +84,15 @@ class MessageCreateView(generics.CreateAPIView):
         if not serializer.is_valid():
             print("Message serializer errors:", serializer.errors)
         serializer.is_valid(raise_exception=True)
-        serializer.save(conversation=conversation, isPrompt=True)
+        user_message = serializer.save(conversation=conversation, isPrompt=True)
 
-        # Get AI response
-        response = process_request(request.data.get("content"),conversation)
+        # Extract image if provided
+        image_file = request.FILES.get('image', None)
 
-        # Save AI response
+        # Get AI response (image is passed but not stored long-term)
+        response = process_request(request.data.get("content"), conversation, image_file)
+
+        # Save AI response (without storing the image)
         response_message = Message(
             conversation=conversation,
             content=response,

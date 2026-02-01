@@ -7,6 +7,8 @@ function Conversation(){
     const navigate = useNavigate()
     const [messages, setMessages] = useState([])
     const [content, setContent] = useState("")
+    const [image, setImage] = useState(null)
+    const [imagePreview, setImagePreview] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
 
@@ -26,19 +28,47 @@ function Conversation(){
         }
     }
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            setImage(file)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setImagePreview(reader.result)
+            }
+            reader.readAsDataURL(file)
+        }
+    }
+
+    const clearImage = () => {
+        setImage(null)
+        setImagePreview(null)
+    }
+
     const sendMessage = async (e) => {
         e.preventDefault()
-        if (!content.trim()) return
+        if (!content.trim() && !image) return
 
         try {
             setLoading(true)
-            const response = await api.post(`/api/chat/${conv_id}/message/`, { content })
+            const formData = new FormData()
+            formData.append('content', content)
+            if (image) {
+                formData.append('image', image)
+            }
+
+            const response = await api.post(`/api/chat/${conv_id}/message/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            })
             setMessages([
                 ...messages,
                 response.data.user_message,
                 response.data.response_message
             ])
             setContent("")
+            clearImage()
         } catch (err) {
             setError("Failed to send message")
             console.error(err)
@@ -70,16 +100,45 @@ function Conversation(){
                 ))}
             </div>
             <form onSubmit={sendMessage} style={{ marginTop: "10px" }}>
-                <input
-                    type="text"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Type your message..."
-                    disabled={loading}
-                />
-                <button type="submit" disabled={loading}>
-                    {loading ? "Sending..." : "Send"}
-                </button>
+                <div style={{ marginBottom: "10px" }}>
+                    <input
+                        type="text"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Type your message..."
+                        disabled={loading}
+                        style={{ width: "100%", padding: "8px", marginBottom: "8px" }}
+                    />
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        disabled={loading}
+                        style={{ marginBottom: "8px" }}
+                    />
+                </div>
+                {imagePreview && (
+                    <div style={{ marginBottom: "10px", position: "relative", display: "inline-block" }}>
+                        <img
+                            src={imagePreview}
+                            alt="Preview"
+                            style={{ maxWidth: "200px", maxHeight: "200px", borderRadius: "4px" }}
+                        />
+                        <button
+                            type="button"
+                            onClick={clearImage}
+                            disabled={loading}
+                            style={{ marginLeft: "10px" }}
+                        >
+                            Remove Image
+                        </button>
+                    </div>
+                )}
+                <div>
+                    <button type="submit" disabled={loading || (!content.trim() && !image)}>
+                        {loading ? "Sending..." : "Send"}
+                    </button>
+                </div>
             </form>
         </div>
     )

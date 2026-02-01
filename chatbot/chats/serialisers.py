@@ -21,10 +21,11 @@ class UserSerialiser(serializers.ModelSerializer):
 
 
 class MessageSerialiser(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Message
-        fields = ["id", "conversation", "content", "isPrompt", "created_at"]
+        fields = ["id", "conversation", "content", "isPrompt", "created_at", "image"]
         extra_kwargs = {"conversation": {"read_only": True}}
 
 class ConversationSerialiser(serializers.ModelSerializer):

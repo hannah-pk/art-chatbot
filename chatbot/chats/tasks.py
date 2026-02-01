@@ -2,6 +2,9 @@ from sentence_transformers import SentenceTransformer, util
 import torch
 from nltk import pos_tag, word_tokenize
 from chats.models import Request
+from PIL import Image
+import io
+import numpy as np
 #from nltk.corpus import stopwords
 
 #stop_words = set(stopwords.words('english'))
@@ -37,27 +40,58 @@ def get_response(message):
 def clarifying_response(self):
     return "Sorry, I'm entirely sure what you are trying to ask for. Please could you rephrase your request in a way that I might understand?"
 
-def clarify_params(self,instruction,params):
-    pass
+def clarify_params(self,param):
+    if param == 'mood':
+        return "Could you give further detail on the kind of mood or atmosphere you're hoping to achieve?"
+    elif param == 'image':
+        return "It seems I'm missing an image. Could you please provide the image?"
 
-def process_request(message,conv):
-    message_embedding = MODEL.encode([message],normalize_embeddings=True)
+
+def process_request(message, conv, image_file=None):
+    """
+    Process user request with optional image data.
+    Image data is processed in-memory and not stored long-term.
+    
+    Args:
+        message: Text message from user
+        conv: Conversation object
+        image_file: Optional uploaded image file (InMemoryUploadedFile or similar)
+    
+    Returns:
+        Response string from the chatbot
+    """
+    message_embedding = MODEL.encode([message], normalize_embeddings=True)
+    
     if not Request.objects.filter(conversation=conv).exists():
         r = Request.objects.create(conversation=conv)
         instruction = deduce_instruction(message)
         if instruction is None:
             return clarifying_response()
         r.set_instruction(instruction)
-        image_needed = deduce_image_needed(message_embedding,r)
+        image_needed = deduce_image_needed(message_embedding, r)
         r.set_image_needed(image_needed)
-        mood = deduce_mood(message)
-        r.add_params('mood',mood)
 
     r = Request.objects.get(conversation=conv)
-    if r.has_enough_params():
-        return perform_instruction(r.instruction,r.params)
+    mood = deduce_mood(message)
+    r.add_params('mood', mood)
+    
+    # Process image if provided and needed
+    if image_file and r.image_needed:
+        try:
+            # Load image from uploaded file into memory
+            img = Image.open(image_file)
+            # You can process the image here without saving it
+            # For example: analyze it, extract features, etc.
+            r.add_params('image', np.array(img))
+        except Exception as e:
+            print(f"Error processing image: {e}")
+            return "There was an error processing your image. Please try again."
+    
+    missing_params = r.missing_params()
+    if missing_params is None:
+        return perform_instruction(r.instruction, r.params)
     else:
-        pass
+        return clarify_params(missing_params)
 
 
 
@@ -115,8 +149,14 @@ def deduce_mood(message):
     return mood
 
 def colour_palette(mood,image=None,number=5):
-    pass
+    i = ""
+    if image is not None:
+        i = " image "
+    return 'colour_palette '+ mood + i + str(number)
 
 def edit_image(image,mood):
-    pass
+    i = ""
+    if image is not None:
+        i = " image "
+    return 'edit_image' + i + mood
 

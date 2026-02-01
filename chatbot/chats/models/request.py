@@ -25,13 +25,13 @@ class Request(models.Model):
         self.needs_image = value
         self.save()
 
-    def has_enough_params(self):
+    def missing_params(self):
         mood = self.params['mood']
         if mood is None:
-            return False
+            return 'mood'
         if self.needs_image:
             if 'image' not in self.params.keys:
-                return False
-        return True
+                return 'image'
+        return None
 
     

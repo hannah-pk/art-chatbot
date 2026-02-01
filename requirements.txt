@@ -12,3 +12,5 @@ sentence-transformers
 hf_xet
 torch
 nltk
+pillow
+numpy

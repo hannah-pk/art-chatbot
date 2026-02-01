@@ -7,6 +7,7 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     content = models.TextField(validators=[MinLengthValidator(3), MaxLengthValidator(200)])
     isPrompt = models.BooleanField(default=True)
+    image = models.ImageField(upload_to='temp_images/', null=True, blank=True)
 
     def __str__(self):
         return self.content
