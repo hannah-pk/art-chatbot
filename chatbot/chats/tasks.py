@@ -6,6 +6,7 @@ from PIL import Image
 import io
 import numpy as np
 #from nltk.corpus import stopwords
+stop_words = ['colour']
 
 #stop_words = set(stopwords.words('english'))
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
@@ -19,8 +20,8 @@ mood_data = torch.load('embeddings/mood.pt',weights_only=False)
 mood_labels = mood_data['labels']
 mood_embeddings = mood_data['embeddings']
 
-image_param_data = torch.load('embeddings/image.pt',weights_only=False)
-image_param_embeddings = image_param_data['embeddings']
+#image_param_data = torch.load('embeddings/image.pt',weights_only=False)
+#image_param_embeddings = image_param_data['embeddings']
 
 def filter_common_words(text):
     words = text.lower().split()
@@ -123,23 +124,25 @@ def deduce_instruction(message):
         return example_labels[best_idx]
     return None
 
-def deduce_image_needed(msg_embedding,request):
+def deduce_image_needed(message,request):
     if request.instruction == "edit_image":
         return True
-    threshold = 0.6
+    #threshold = 0.6
     image_needed = False
-    img_scores = util.cos_sim(msg_embedding,image_param_embeddings)[0]
-    best_idx = img_scores.argmax().item()
-    best_score = img_scores[best_idx].item()
+    #img_scores = util.cos_sim(msg_embedding,image_param_embeddings)[0]
+    #best_idx = img_scores.argmax().item()
+    #best_score = img_scores[best_idx].item()
 
-    if best_score >= threshold:
-        image_needed = True
+    #if best_score >= threshold:
+        #image_needed = True
+    if 'this' in message:
+        return True
     return image_needed
 
 
 def deduce_mood(message):
     threshold = 0.5
-    filtered_message = extract_relevant_words(message)
+    filtered_message = filter_common_words(extract_relevant_words(message))
     print(filtered_message)
     words = filtered_message.split()
     mood = None

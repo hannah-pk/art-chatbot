@@ -8,7 +8,7 @@ os.makedirs(output_dir,exist_ok=True)
 
 INTENTS= {
     "colour_palette":["Please generate a colour palette based off this image", "Create a colour palette around the theme of spring", "Give me a colour scheme for a fight scene"],
-    "edit_image":["Could you make the shadows more intense and sad?", "Please enhance the brightness and contrast of this image", "Can you add a vignette effect to this photo?", "Make the colors more vibrant and saturated", "This image looks a bit flat, how can i fix it?"],
+    "edit_image":["Could you make the shadows more intense and sad?", "Please enhance the brightness and contrast of this image", "Can you add a vignette effect to this photo?", "Make the colors more vibrant and saturated", "This image looks a bit flat, how can i fix it?", "Make this picture look more serene"],
 }
 
 MOODS = {
@@ -18,7 +18,7 @@ MOODS = {
     "calm": ["soft", "pastel", "tranquil", "peaceful", "serene", "soothing", "relaxing", "gentle"],
 }
 
-IMAGE_REQUESTS = ["Please generate a colour palette based off this image", "How can i make this drawing look more cheerful?", ]
+#IMAGE_REQUESTS = ["Please generate a colour palette based off this image", "How can i make this drawing look more cheerful?", "Please make this look darker" ]
     
 
 
@@ -66,13 +66,13 @@ class Command(BaseCommand):
         os.path.join(output_dir,'mood.pt')
         )
 
-        image_param_embeddings = MODEL.encode(IMAGE_REQUESTS, normalize_embeddings=True,convert_to_tensor=True)
+        #image_param_embeddings = MODEL.encode(IMAGE_REQUESTS, normalize_embeddings=True,convert_to_tensor=True)
 
-        torch.save({
-            'embeddings': image_param_embeddings,
-            'model': 'all-MiniLM-L6-v2',
-            'type': 'image_requests',
-        },
-        os.path.join(output_dir,'image.pt')
-        )
+        #torch.save({
+        #    'embeddings': image_param_embeddings,
+        #    'model': 'all-MiniLM-L6-v2',
+        #    'type': 'image_requests',
+        #},
+        #os.path.join(output_dir,'image.pt')
+        #)
 
