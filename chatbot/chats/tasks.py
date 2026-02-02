@@ -67,35 +67,44 @@ def process_request(message, conv, image_file=None):
     if instruction is None:
         instruction = deduce_instruction(message)
         if instruction is None: #if instruction is still None after trying to deduce the instruction
-            return clarifying_response()
+            return clarifying_response(), None
     r.set_instruction(instruction)
-    image_needed = deduce_image_needed(message_embedding, r)
-    r.set_image_needed(image_needed)
+    
+    if not r.needs_image:
+        image_needed = deduce_image_needed(message_embedding, r)
+        r.set_image_needed(image_needed)
 
     mood = deduce_mood(message)
     r.add_params('mood', mood)
     
     # Process image if provided and needed
-    if image_file and r.image_needed:
+    if image_file and r.needs_image:
         try:
-            # Load image from uploaded file into memory
-            img = Image.open(image_file)
-            # You can process the image here without saving it
-            # For example: analyze it, extract features, etc.
-            r.add_params('image', np.array(img))
+            # image_file is already a path to the saved file
+            r.add_params('image', image_file)
         except Exception as e:
             print(f"Error processing image: {e}")
             return "There was an error processing your image. Please try again."
     
     missing_params = r.missing_params()
     if missing_params is None:
-        return perform_instruction(r.instruction, r.params)
+        result = perform_instruction(r)
+        # Normalize to a 2-tuple: (response, image_or_None)
+        if isinstance(result, (list, tuple)):
+            if len(result) >= 2:
+                return result[0], result[1]
+            if len(result) == 1:
+                return result[0], None
+        return result, None
     else:
-        return clarify_params(missing_params)
+        return clarify_params(missing_params), None
 
 
 
-def perform_instruction(instruction, params):
+def perform_instruction(request):
+    instruction = request.instruction
+    params = request.params
+    request.delete()
     if instruction=="edit_image":
         return edit_image(**params)
     elif instruction=="colour_palette":
@@ -153,15 +162,9 @@ def deduce_mood(message):
         return best_mood """
     return mood
 
-def colour_palette(mood,image=None,number=5):
-    i = ""
-    if image is not None:
-        i = " image "
-    return 'colour_palette '+ mood + i + str(number)
+def colour_palette(mood, image=None, number=5):
+    return 'colour_palette '+ mood + str(number), image
 
-def edit_image(image,mood):
-    i = ""
-    if image is not None:
-        i = " image "
-    return 'edit_image' + i + mood
+def edit_image(image, mood):
+    return 'edit_image' + mood, image
 

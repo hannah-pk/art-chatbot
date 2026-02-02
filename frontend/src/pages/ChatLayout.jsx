@@ -5,13 +5,23 @@ import AuthModal from "../components/AuthModal"
 import { ACCESS_TOKEN } from "../constants"
 import "../styles/ChatLayout.css"
 
+// Utility function to convert blob URL to File
+const blobUrlToFile = async (blobUrl, filename) => {
+    const response = await fetch(blobUrl)
+    const blob = await response.blob()
+    return new File([blob], filename, { type: blob.type })
+}
+
 function ChatLayout() {
     const { conv_id } = useParams()
     const navigate = useNavigate()
     const messagesEndRef = useRef(null)
+    const messageInputRef = useRef(null)
     const [conversations, setConversations] = useState([])
     const [messages, setMessages] = useState([])
     const [content, setContent] = useState("")
+    const [imageFile, setImageFile] = useState(null)
+    const [imagePreview, setImagePreview] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [conversationsLoading, setConversationsLoading] = useState(true)
@@ -76,7 +86,7 @@ function ChatLayout() {
 
     const sendMessage = async (e) => {
         e.preventDefault()
-        if (!content.trim()) return
+        if (!content.trim() && !imageFile) return
 
         let currentConvId = conv_id
 
@@ -92,14 +102,29 @@ function ChatLayout() {
                 navigate(`/chat/${currentConvId}`)
             }
 
-            // Send message
-            const response = await api.post(`/api/chat/${currentConvId}/message/`, { content })
+            // Create FormData to handle both text and image
+            const formData = new FormData()
+            formData.append("content", content)
+            if (imageFile) {
+                formData.append("image", imageFile)
+            }
+
+            // Send message with FormData (instead of JSON)
+            const response = await api.post(`/api/chat/${currentConvId}/message/`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data"
+                }
+            })
             setMessages([
                 ...messages,
                 response.data.user_message,
                 response.data.response_message
             ])
             setContent("")
+            setImageFile(null)
+            setImagePreview(null)
+            // Focus the input after sending
+            setTimeout(() => messageInputRef.current?.focus(), 0)
         } catch (err) {
             // If conversation is gone (404), show warning and redirect to empty chat
             if (err?.response?.status === 404) {
@@ -129,6 +154,52 @@ function ChatLayout() {
     }
 
     const [menuOpenId, setMenuOpenId] = useState(null)
+
+    const handleImagePaste = async (e) => {
+        const items = e.clipboardData?.items
+        if (!items) return
+
+        for (let item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault()
+                const file = item.getAsFile()
+                await processImageFile(file)
+                break
+            }
+        }
+    }
+
+    const handleImageDrop = async (e) => {
+        e.preventDefault()
+        const files = e.dataTransfer?.files
+        if (!files) return
+
+        for (let file of files) {
+            if (file.type.startsWith('image/')) {
+                await processImageFile(file)
+                break
+            }
+        }
+    }
+
+    const processImageFile = async (file) => {
+        setImageFile(file)
+        // Create preview
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            setImagePreview(e.target?.result)
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const clearImage = () => {
+        setImageFile(null)
+        setImagePreview(null)
+    }
+
+    const handleDragOver = (e) => {
+        e.preventDefault()
+    }
 
     const handleRenameConversation = async (convId) => {
         const newTitle = window.prompt("Enter new title for the conversation:", conversations.find(c=>c.id===convId)?.title || "")
@@ -243,6 +314,9 @@ function ChatLayout() {
                             {messages.map((msg, idx) => (
                                 <div key={idx} className={`message ${msg.isPrompt ? "user" : "bot"}`}>
                                     <div className="message-content">
+                                        {msg.image && (
+                                            <img src={msg.image} alt="Message" className="message-image" />
+                                        )}
                                         <p>{msg.content}</p>
                                     </div>
                                 </div>
@@ -254,12 +328,30 @@ function ChatLayout() {
 
                 {error && <div className="error">{error}</div>}
 
+                {imagePreview && (
+                    <div className="image-preview-container">
+                        <img src={imagePreview} alt="Preview" className="image-preview" />
+                        <button
+                            type="button"
+                            onClick={clearImage}
+                            className="clear-image-btn"
+                            disabled={loading}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )}
+
                 <form onSubmit={sendMessage} className="message-form">
                     <input
+                        ref={messageInputRef}
                         type="text"
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
-                        placeholder="Type your message..."
+                        onPaste={handleImagePaste}
+                        onDrop={handleImageDrop}
+                        onDragOver={handleDragOver}
+                        placeholder="Type your message or drag/paste an image..."
                         disabled={loading}
                         className="message-input"
                     />

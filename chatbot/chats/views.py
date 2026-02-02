@@ -79,24 +79,32 @@ class MessageCreateView(generics.CreateAPIView):
         conv_id = self.kwargs['conv_id']
         conversation = get_object_or_404(Conversation, id=conv_id, user_identity=identity)
 
-        # Save user's message
+        # Debug: check if image is in request
+        print(f"Request FILES: {request.FILES}")
+        print(f"Request DATA keys: {request.data.keys()}")
+
+        # Save user's message (including image if provided)
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             print("Message serializer errors:", serializer.errors)
         serializer.is_valid(raise_exception=True)
         user_message = serializer.save(conversation=conversation, isPrompt=True)
+        
+        # Debug: check if image was saved
+        print(f"User message image: {user_message.image}")
 
-        # Extract image if provided
-        image_file = request.FILES.get('image', None)
+        # Get image file path if it exists
+        image_path = user_message.image.path if user_message.image else None
 
-        # Get AI response (image is passed but not stored long-term)
-        response = process_request(request.data.get("content"), conversation, image_file)
+        # Get AI response (pass image file path)
+        response, image = process_request(request.data.get("content"), conversation, image_path)
 
-        # Save AI response (without storing the image)
+        # Save AI response (attach image if one was used)
         response_message = Message(
             conversation=conversation,
             content=response,
             isPrompt=False,
+            image=(user_message.image if image else None)
         )
         response_message.save()
 
@@ -105,7 +113,7 @@ class MessageCreateView(generics.CreateAPIView):
             {
                 "user_message": serializer.data,
                 "response": response,
-                "response_message": MessageSerialiser(response_message).data
+                "response_message": MessageSerialiser(response_message, context={"request": request}).data
             },
             status=status.HTTP_201_CREATED,
             headers=headers
