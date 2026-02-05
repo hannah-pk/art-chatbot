@@ -104,7 +104,7 @@ class MessageCreateView(generics.CreateAPIView):
             conversation=conversation,
             content=response,
             isPrompt=False,
-            image=(user_message.image if image else None)
+            image=(image if image else None)
         )
         response_message.save()
 

@@ -8,6 +8,9 @@ import cv2 as cv
 from sklearn.cluster import KMeans
 #from nltk.corpus import stopwords
 stop_words = ['colour']
+import os
+import uuid
+from django.conf import settings
 
 #stop_words = set(stopwords.words('english'))
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
@@ -175,7 +178,7 @@ def deduce_mood(message):
 def sample_hues(mean,n):
     hue = np.random.normal(mean,45,n)
     for i in range(len(hue)):
-        hue[i] = hue[i]%180
+        hue[i] = int(hue[i]%180)
     return hue
 
 def sample_saturation_or_value(mean,n):
@@ -186,6 +189,7 @@ def sample_saturation_or_value(mean,n):
             s_or_v[i] = 255
         if x < 0:
             s_or_v[i] = 0
+        s_or_v[i] = int(s_or_v[i])
     return s_or_v
 
 def sample_colours(mood,n):
@@ -195,6 +199,17 @@ def sample_colours(mood,n):
     values = sample_saturation_or_value(value_mean,n)
     return np.stack((hues,saturations,values),axis=1)
 
+def generate_colour_palette_image(colours):
+    img_height=500
+    img_width=300
+    row_height = img_height//len(colours)
+
+    result = np.zeros((row_height * len(colours), img_width, 3), dtype=colours.dtype)
+
+    for i, colour in enumerate(colours):
+        result[i*row_height:(i+1)*row_height, :, :] = colour
+    print(result)
+    return result
 
 def colour_palette(mood, image=None, number=5):
     n = number*4
@@ -203,15 +218,37 @@ def colour_palette(mood, image=None, number=5):
         img = cv.imread(image)
         converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV) #in artistic contexts, hsv or hsl are more commonly used for colouring
         unique_values = np.unique(converted_image.reshape(-1,3),axis=0)
-        n = n/2
+        n = n//2
         for i in range(n):
             colours.append(np.random.choice(unique_values))
     mood_based_colours = sample_colours(mood,n)
     for c in mood_based_colours:
         colours.append(c)
     kmeans = KMeans(n_clusters=number).fit(colours)
-    return kmeans.cluster_centers_
-    #return 'colour_palette '+ mood + str(number), image
+    result_img = generate_colour_palette_image(kmeans.cluster_centers_)
+
+
+    # write the generated numpy image to a temporary file and return its path
+    try:
+        out_img = result_img
+        if out_img.dtype != np.uint8:
+            out_img = np.clip(out_img, 0, 255).astype(np.uint8)
+        # convert RGB -> BGR for OpenCV
+        bgr = cv.cvtColor(out_img, cv.COLOR_HSV2BGR)
+
+        media_dir = getattr(settings, 'MEDIA_ROOT', None)
+        if not media_dir:
+            media_dir = os.path.join(os.getcwd(), 'media')
+        temp_dir = os.path.join(media_dir, 'temp_images')
+        os.makedirs(temp_dir, exist_ok=True)
+        filename = f"palette_{uuid.uuid4().hex}.png"
+        save_path = os.path.join(temp_dir, filename)
+
+        cv.imwrite(save_path, bgr)
+        return f'colour_palette {mood} {number}', save_path
+    except Exception as e:
+        print(f"Failed to write palette image: {e}")
+        return f'colour_palette {mood} {number}', None
 
 def edit_image(image, mood):
     return 'edit_image' + mood, image
