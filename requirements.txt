@@ -12,5 +12,6 @@ sentence-transformers
 hf_xet
 torch
 nltk
-pillow
+opencv-python
 numpy
+scikit-learn

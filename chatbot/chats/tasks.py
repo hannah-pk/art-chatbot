@@ -2,9 +2,10 @@ from sentence_transformers import SentenceTransformer, util
 import torch
 from nltk import pos_tag, word_tokenize
 from chats.models import Request
-from PIL import Image
 import io
 import numpy as np
+import cv2 as cv
+from sklearn.cluster import KMeans
 #from nltk.corpus import stopwords
 stop_words = ['colour']
 
@@ -22,6 +23,12 @@ mood_embeddings = mood_data['embeddings']
 
 #image_param_data = torch.load('embeddings/image.pt',weights_only=False)
 #image_param_embeddings = image_param_data['embeddings']
+mood_colours = {
+    'happy':(30,224,224),
+    'calm':(60,96,224),
+    'angry':(0,224,96),
+    'sad':(120,96,96)
+}
 
 def filter_common_words(text):
     words = text.lower().split()
@@ -165,8 +172,46 @@ def deduce_mood(message):
         return best_mood """
     return mood
 
+def sample_hues(mean,n):
+    hue = np.random.normal(mean,45,n)
+    for i in range(len(hue)):
+        hue[i] = hue[i]%180
+    return hue
+
+def sample_saturation_or_value(mean,n):
+    s_or_v = np.random.normal(mean,30,n)
+    for i in range(len(s_or_v)):
+        x = s_or_v[i]
+        if x > 255:
+            s_or_v[i] = 255
+        if x < 0:
+            s_or_v[i] = 0
+    return s_or_v
+
+def sample_colours(mood,n):
+    hue_mean, saturation_mean,value_mean = mood_colours[mood]
+    hues = sample_hues(hue_mean,n)
+    saturations = sample_saturation_or_value(saturation_mean,n)
+    values = sample_saturation_or_value(value_mean,n)
+    return np.stack((hues,saturations,values),axis=1)
+
+
 def colour_palette(mood, image=None, number=5):
-    return 'colour_palette '+ mood + str(number), image
+    n = number*4
+    colours = []
+    if image is not None:
+        img = cv.imread(image)
+        converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV) #in artistic contexts, hsv or hsl are more commonly used for colouring
+        unique_values = np.unique(converted_image.reshape(-1,3),axis=0)
+        n = n/2
+        for i in range(n):
+            colours.append(np.random.choice(unique_values))
+    mood_based_colours = sample_colours(mood,n)
+    for c in mood_based_colours:
+        colours.append(c)
+    kmeans = KMeans(n_clusters=number).fit(colours)
+    return kmeans.cluster_centers_
+    #return 'colour_palette '+ mood + str(number), image
 
 def edit_image(image, mood):
     return 'edit_image' + mood, image
