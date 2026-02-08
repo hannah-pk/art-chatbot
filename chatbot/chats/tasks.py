@@ -208,8 +208,37 @@ def generate_colour_palette_image(colours):
 
     for i, colour in enumerate(colours):
         result[i*row_height:(i+1)*row_height, :, :] = colour
-    print(result)
     return result
+
+def darken_colour(colour,grade=1):
+    hue,saturation,value = colour
+    if grade==2:
+        hue += 90
+    else:
+        if hue<=30 or hue >150: #if colour between blue to yellow (including magenta, red)
+            hue -= 15
+        else: #if colour between yellow and blue (including green, cyan)
+            hue += 15
+    hue = hue%180
+    change_scale = 10*grade
+    saturation = min(255,saturation+change_scale)
+    value = max(0,value-change_scale)
+    return (hue,saturation,value)
+
+def lighten_colour(colour,grade=1):
+    hue,saturation,value = colour
+    if grade==2:
+        hue += 90
+    else:
+        if hue<30 or hue >=150: #if colour between blue to yellow (including magenta, red)
+            hue += 15
+        else: #if colour between yellow and blue (including green, cyan)
+            hue -= 15
+    hue = hue%180
+    change_scale = 10*grade
+    saturation = max(0,saturation-change_scale)
+    value = min(255,value+change_scale)
+    return (hue,saturation,value)
 
 def colour_palette(mood, image=None, number=5):
     n = number*4
