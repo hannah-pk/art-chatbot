@@ -270,14 +270,23 @@ def colour_palette(mood, image=None, number=5):
         colours.append(c)
     kmeans = KMeans(n_clusters=number).fit(colours)
     result_img = generate_colour_palette_image(kmeans.cluster_centers_)
+    return f'colour_palette {mood} {number}', save_img(result_img)
 
+def edit_image(image, mood):
+    if image is not None:
+        img = cv.imread(image)
+        converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV)
+    vectorise_soft_light = np.vectorize(soft_light_filter)
+    filtered_img = vectorise_soft_light(converted_image)
+    return 'edit_image' + mood, save_img(filtered_img,)
 
+def save_img(pixels):
     # write the generated numpy image to a temporary file and return its path
     try:
-        out_img = result_img
+        out_img = pixels
         if out_img.dtype != np.uint8:
             out_img = np.clip(out_img, 0, 255).astype(np.uint8)
-        # convert RGB -> BGR for OpenCV
+        # convert HSV -> BGR for OpenCV
         bgr = cv.cvtColor(out_img, cv.COLOR_HSV2BGR)
 
         media_dir = getattr(settings, 'MEDIA_ROOT', None)
@@ -289,16 +298,7 @@ def colour_palette(mood, image=None, number=5):
         save_path = os.path.join(temp_dir, filename)
 
         cv.imwrite(save_path, bgr)
-        return f'colour_palette {mood} {number}', save_path
+        return save_path
     except Exception as e:
-        print(f"Failed to write palette image: {e}")
-        return f'colour_palette {mood} {number}', None
-
-def edit_image(image, mood):
-    if image is not None:
-        img = cv.imread(image)
-        converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV)
-    vectorise_soft_light = np.vectorize(soft_light_filter)
-    filtered_img = vectorise_soft_light(converted_image)
-    return 'edit_image' + mood, image
-
+        print(f"Failed to write image: {e}")
+        return None

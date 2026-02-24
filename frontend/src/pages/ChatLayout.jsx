@@ -123,8 +123,7 @@ function ChatLayout() {
             setContent("")
             setImageFile(null)
             setImagePreview(null)
-            // Focus the input after sending
-            setTimeout(() => messageInputRef.current?.focus(), 0)
+            
         } catch (err) {
             // If conversation is gone (404), show warning and redirect to empty chat
             if (err?.response?.status === 404) {
@@ -354,6 +353,7 @@ function ChatLayout() {
                         placeholder="Type your message or drag/paste an image..."
                         disabled={loading}
                         className="message-input"
+                        autoFocus
                     />
                     <button type="submit" disabled={loading} className="send-btn">
                         {loading ? "Sending..." : "Send"}
