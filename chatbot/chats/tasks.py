@@ -240,6 +240,21 @@ def lighten_colour(colour,grade=1):
     value = min(255,value+change_scale)
     return (hue,saturation,value)
 
+def soft_light_filter(colour,mood):
+    #based off the official soft light filter in image editing apps such as Photoshop
+    mood_colour = mood_colours[mood]
+    if mood_colour[2] <= 128:
+        intermed = np.subtract(colour,np.multiply(colour,colour))
+    else:
+        intermed = np.subtract(np.sqrt(colour),colour)
+    result = np.add(
+        np.multiply(
+            np.subtract(np.multiply(2,mood_colour),(180,255,255)),
+            intermed),
+        colour
+    )
+    return result
+
 def colour_palette(mood, image=None, number=5):
     n = number*4
     colours = []
@@ -280,5 +295,10 @@ def colour_palette(mood, image=None, number=5):
         return f'colour_palette {mood} {number}', None
 
 def edit_image(image, mood):
+    if image is not None:
+        img = cv.imread(image)
+        converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV)
+    vectorise_soft_light = np.vectorize(soft_light_filter)
+    filtered_img = vectorise_soft_light(converted_image)
     return 'edit_image' + mood, image
 
