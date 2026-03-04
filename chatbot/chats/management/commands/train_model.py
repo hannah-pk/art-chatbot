@@ -25,9 +25,26 @@ MOODS = {
 class Command(BaseCommand):
     help = 'Train the language model for the chatbot and save the required models into external files'
 
-    def handle(self, *args, **options):
-        MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--instructions",
+            action='store_true'
+        )
+        parser.add_argument(
+            "--mood",
+            action="store_true"
+        )
 
+    def handle(self, *args, **options):
+        self.MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+        instruction = options["instructions"]
+        mood = options["mood"]
+        if instruction:
+            self.train_instructions()
+        if mood:
+            self.train_mood()
+
+    def train_instructions(self):
         examples = []
         example_to_intent = []
 
@@ -36,8 +53,8 @@ class Command(BaseCommand):
                 examples.append(example)
                 example_to_intent.append(intent)
 
-        example_embeddings = MODEL.encode(examples,normalize_embeddings=True)
-
+        example_embeddings = self.MODEL.encode(examples,normalize_embeddings=True)
+    
         torch.save({
             'labels': example_to_intent,
             'embeddings': example_embeddings,
@@ -47,11 +64,12 @@ class Command(BaseCommand):
         os.path.join(output_dir,'intent.pt')
         )
 
+    def train_mood(self):
         mood_names = []
         mood_embeddings = []
 
         for mood, synonyms in MOODS.items():
-            emb= MODEL.encode(synonyms,normalize_embeddings=True, convert_to_tensor=True)
+            emb= self.MODEL.encode(synonyms,normalize_embeddings=True, convert_to_tensor=True)
             centroid = emb.mean(dim=0)
             mood_embeddings.append(centroid)
             mood_names.append(mood)

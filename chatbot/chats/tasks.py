@@ -11,6 +11,8 @@ stop_words = ['colour']
 import os
 import uuid
 from django.conf import settings
+import spacy
+nlp = spacy.load("en_core_web_sm")
 
 #stop_words = set(stopwords.words('english'))
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
@@ -74,6 +76,16 @@ def process_request(message, conv, image_file=None):
     message_embedding = MODEL.encode([message], normalize_embeddings=True)
     
     r = Request.objects.get_or_create(conversation=conv)[0]
+
+    # Process image if provided, even if not necessarily needed
+    if image_file:
+        try:
+            # image_file is already a path to the saved file
+            r.add_params('image', image_file)
+        except Exception as e:
+            print(f"Error processing image: {e}")
+            return "There was an error processing your image. Please try again."
+
     instruction= r.instruction
     if instruction is None:
         instruction = deduce_instruction(message)
@@ -88,14 +100,7 @@ def process_request(message, conv, image_file=None):
     mood = deduce_mood(message)
     r.add_params('mood', mood)
     
-    # Process image if provided and needed
-    if image_file and r.needs_image:
-        try:
-            # image_file is already a path to the saved file
-            r.add_params('image', image_file)
-        except Exception as e:
-            print(f"Error processing image: {e}")
-            return "There was an error processing your image. Please try again."
+
     
     missing_params = r.missing_params()
     if missing_params is None:
@@ -240,18 +245,26 @@ def lighten_colour(colour,grade=1):
     value = min(255,value+change_scale)
     return (hue,saturation,value)
 
-def soft_light_filter(colour,mood):
+def soft_light_filter(hsv_img,mood):
     #based off the official soft light filter in image editing apps such as Photoshop
-    mood_colour = mood_colours[mood]
+    hsv = hsv_img.astype(np.float32)
+    mood_colour = np.array(mood_colours[mood], dtype=np.float32)
+    #mood_colour = mood_colours[mood]
     if mood_colour[2] <= 128:
-        intermed = np.subtract(colour,np.multiply(colour,colour))
+        intermed = hsv - hsv*hsv
+        #intermed = np.subtract(colour,np.multiply(colour,colour))
     else:
-        intermed = np.subtract(np.sqrt(colour),colour)
-    result = np.add(
-        np.multiply(
-            np.subtract(np.multiply(2,mood_colour),(180,255,255)),
-            intermed),
-        colour
+        intermed = np.sqrt(hsv)-hsv
+        #intermed = np.subtract(np.sqrt(colour),colour)
+    #result = #np.add(
+        #np.multiply(
+            #np.subtract(np.multiply(2,mood_colour),(180,255,255)),
+            #intermed),
+        #colour
+    #)
+    result = (
+        (2 * mood_colour - np.array([180, 255, 255])) * intermed
+        + hsv
     )
     return result
 
@@ -264,7 +277,7 @@ def colour_palette(mood, image=None, number=5):
         unique_values = np.unique(converted_image.reshape(-1,3),axis=0)
         n = n//2
         for i in range(n):
-            colours.append(np.random.choice(unique_values))
+            colours.append(unique_values[np.random.randint(0,len(unique_values))])
     mood_based_colours = sample_colours(mood,n)
     for c in mood_based_colours:
         colours.append(c)
@@ -276,9 +289,15 @@ def edit_image(image, mood):
     if image is not None:
         img = cv.imread(image)
         converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV)
-    vectorise_soft_light = np.vectorize(soft_light_filter)
-    filtered_img = vectorise_soft_light(converted_image)
-    return 'edit_image' + mood, save_img(filtered_img,)
+
+    h, w, _ = converted_image.shape
+    reshaped = converted_image.reshape(-1, 3)
+    
+    processed = np.array([
+        soft_light_filter(pixel, mood)
+        for pixel in reshaped
+    ], dtype=converted_image.dtype)
+    return 'edit_image' + mood, save_img(processed)
 
 def save_img(pixels):
     # write the generated numpy image to a temporary file and return its path
