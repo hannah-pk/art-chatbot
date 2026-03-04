@@ -34,7 +34,7 @@ function ChatLayout() {
 
     useEffect(() => {
         messageInputRef.current?.focus();
-    }, []);
+    }, [messages]);
 
     useEffect(() => {
         scrollToBottom()
