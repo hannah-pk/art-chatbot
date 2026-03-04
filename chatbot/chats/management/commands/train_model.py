@@ -7,8 +7,8 @@ output_dir = 'embeddings'
 os.makedirs(output_dir,exist_ok=True)
 
 INTENTS= {
-    "colour_palette":["Please generate a colour palette based off this image", "Create a colour palette around the theme of spring", "Give me a colour scheme for a fight scene"],
-    "edit_image":["Could you make the shadows more intense and sad?", "Please enhance the brightness and contrast of this image", "Can you add a vignette effect to this photo?", "Make the colors more vibrant and saturated", "This image looks a bit flat, how can i fix it?", "Make this picture look more serene"],
+    "colour_palette":["Please generate a colour palette based off", "Create a colour palette around the theme of", "Give me a colour scheme for a"],
+    "edit_image":["Could you make the shadows more", "Please enhance the", "Can you add a", "Make the colors more", "This image looks a bit flat, how can i fix it?", "Make this picture look more", "make it look"],
 }
 
 MOODS = {

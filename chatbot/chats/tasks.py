@@ -29,10 +29,10 @@ mood_embeddings = mood_data['embeddings']
 #image_param_data = torch.load('embeddings/image.pt',weights_only=False)
 #image_param_embeddings = image_param_data['embeddings']
 mood_colours = {
-    'happy':(30,224,224),
-    'calm':(60,96,224),
-    'angry':(0,224,96),
-    'sad':(120,96,96)
+    'happy':(30,190,255),
+    'calm':(60,64,230),
+    'angry':(0,190,128),
+    'sad':(100,128,190)
 }
 
 def filter_common_words(text):
@@ -59,6 +59,14 @@ def clarify_params(param):
     elif param == 'image':
         return "It seems I'm missing an image. Could you please provide the image?"
 
+def split_text(msg):
+    doc = nlp(msg)
+    # Find the root verb, split after its direct object or complement
+    for token in doc:
+        if token.dep_ in ("acomp", "advmod", "prep") and token.i > 0:
+            split_point = token.idx
+            return msg[:split_point].strip(), msg[split_point:].strip()
+    return msg, ""
 
 def process_request(message, conv, image_file=None):
     """
@@ -73,7 +81,9 @@ def process_request(message, conv, image_file=None):
     Returns:
         Response string from the chatbot
     """
-    message_embedding = MODEL.encode([message], normalize_embeddings=True)
+    instruction_half,mood_half = split_text(message)
+    print(instruction_half+"::"+mood_half)
+    instruction_embedding = MODEL.encode([instruction_half], normalize_embeddings=True)
     
     r = Request.objects.get_or_create(conversation=conv)[0]
 
@@ -94,11 +104,13 @@ def process_request(message, conv, image_file=None):
     r.set_instruction(instruction)
     
     if not r.needs_image:
-        image_needed = deduce_image_needed(message_embedding, r)
+        image_needed = deduce_image_needed(instruction_embedding, r)
         r.set_image_needed(image_needed)
 
-    mood = deduce_mood(message)
-    r.add_params('mood', mood)
+    params = r.params
+    if params.get("mood") is None:
+        mood = deduce_mood(message)
+        r.add_params('mood', mood)
     
 
     
@@ -245,28 +257,19 @@ def lighten_colour(colour,grade=1):
     value = min(255,value+change_scale)
     return (hue,saturation,value)
 
-def soft_light_filter(hsv_img,mood):
+def soft_light_filter(bgr_img,mood):
     #based off the official soft light filter in image editing apps such as Photoshop
-    hsv = hsv_img.astype(np.float32)
-    mood_colour = np.array(mood_colours[mood], dtype=np.float32)
-    #mood_colour = mood_colours[mood]
-    if mood_colour[2] <= 128:
-        intermed = hsv - hsv*hsv
-        #intermed = np.subtract(colour,np.multiply(colour,colour))
-    else:
-        intermed = np.sqrt(hsv)-hsv
-        #intermed = np.subtract(np.sqrt(colour),colour)
-    #result = #np.add(
-        #np.multiply(
-            #np.subtract(np.multiply(2,mood_colour),(180,255,255)),
-            #intermed),
-        #colour
-    #)
-    result = (
-        (2 * mood_colour - np.array([180, 255, 255])) * intermed
-        + hsv
-    )
-    return result
+    B=bgr_img.astype(np.float32)/255
+    F = (cv.cvtColor(np.array([[mood_colours[mood]]],dtype=np.uint8),cv.COLOR_HSV2BGR)/255)[0][0]
+
+    
+    R = np.where(F <= 0.5,
+                 B - (1 - 2*F) * B * (1 - B),
+                 B + (2*F - 1) * (np.sqrt(B) - B))
+    
+    # Convert back to 0-255
+    return np.clip(R * 255, 0, 255).astype(np.uint8)
+
 
 def colour_palette(mood, image=None, number=5):
     n = number*4
@@ -282,31 +285,31 @@ def colour_palette(mood, image=None, number=5):
     for c in mood_based_colours:
         colours.append(c)
     kmeans = KMeans(n_clusters=number).fit(colours)
-    result_img = generate_colour_palette_image(kmeans.cluster_centers_)
-    return f'colour_palette {mood} {number}', save_img(result_img)
+    result_img = generate_colour_palette_image(kmeans.cluster_centers_).astype(np.uint8)
+    bgr = cv.cvtColor(result_img, cv.COLOR_HSV2BGR)
+    return f'colour_palette {mood} {number}', save_img(bgr)
 
 def edit_image(image, mood):
     if image is not None:
         img = cv.imread(image)
-        converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV)
 
-    h, w, _ = converted_image.shape
-    reshaped = converted_image.reshape(-1, 3)
-    
-    processed = np.array([
-        soft_light_filter(pixel, mood)
-        for pixel in reshaped
-    ], dtype=converted_image.dtype)
-    return 'edit_image' + mood, save_img(processed)
+    h, w, _ = img.shape
+    reshaped = img.reshape(-1, 3)
+    processed = soft_light_filter(reshaped,mood)
+    #processed = np.array([
+    #    soft_light_filter(pixel, mood)
+    #    for pixel in reshaped
+    #], dtype=converted_image.dtype)
+    return 'edit_image' + mood, save_img(processed.reshape(h,w,3))
 
 def save_img(pixels):
     # write the generated numpy image to a temporary file and return its path
     try:
-        out_img = pixels
+        """ out_img = pixels
         if out_img.dtype != np.uint8:
             out_img = np.clip(out_img, 0, 255).astype(np.uint8)
         # convert HSV -> BGR for OpenCV
-        bgr = cv.cvtColor(out_img, cv.COLOR_HSV2BGR)
+        bgr = cv.cvtColor(out_img, cv.COLOR_HSV2BGR) """
 
         media_dir = getattr(settings, 'MEDIA_ROOT', None)
         if not media_dir:
@@ -316,7 +319,7 @@ def save_img(pixels):
         filename = f"palette_{uuid.uuid4().hex}.png"
         save_path = os.path.join(temp_dir, filename)
 
-        cv.imwrite(save_path, bgr)
+        cv.imwrite(save_path, pixels)
         return save_path
     except Exception as e:
         print(f"Failed to write image: {e}")

@@ -33,6 +33,10 @@ function ChatLayout() {
     }
 
     useEffect(() => {
+        messageInputRef.current?.focus();
+    }, []);
+
+    useEffect(() => {
         scrollToBottom()
     }, [messages])
 
@@ -228,7 +232,7 @@ function ChatLayout() {
             setError("Failed to delete conversation")
         }
     }
-
+    
     return (
         <div className="chat-layout">
             <AuthModal
@@ -353,7 +357,6 @@ function ChatLayout() {
                         placeholder="Type your message or drag/paste an image..."
                         disabled={loading}
                         className="message-input"
-                        autoFocus
                     />
                     <button type="submit" disabled={loading} className="send-btn">
                         {loading ? "Sending..." : "Send"}
