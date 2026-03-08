@@ -30,9 +30,9 @@ mood_embeddings = mood_data['embeddings']
 #image_param_embeddings = image_param_data['embeddings']
 mood_colours = {
     'happy':(30,190,255),
-    'calm':(60,64,230),
-    'angry':(0,190,128),
-    'sad':(100,128,190)
+    'calm':(60,64,190),
+    'angry':(0,190,64),
+    'sad':(100,190,64)
 }
 
 def filter_common_words(text):
@@ -193,7 +193,7 @@ def deduce_mood(message):
     return mood
 
 def sample_hues(mean,n):
-    hue = np.random.normal(mean,45,n)
+    hue = np.random.normal(mean,30,n)
     for i in range(len(hue)):
         hue[i] = int(hue[i]%180)
     return hue
@@ -226,6 +226,24 @@ def generate_colour_palette_image(colours):
     for i, colour in enumerate(colours):
         result[i*row_height:(i+1)*row_height, :, :] = colour
     return result
+
+def colour_contrast(bgr,hsv):
+    num_grades = 5 #5 grades of shading
+    kmeans = KMeans(n_clusters=num_grades).fit(bgr)
+    centres = kmeans.cluster_centers_
+    labels = kmeans.labels_
+    order = np.argsort(centres[:,0])
+    sorted_labels = np.argsort(order)[labels]
+    for i in range(len(labels)):
+        grade = sorted_labels[i]
+        if grade < 2:
+            n = grade + 1
+            hsv[i] = darken_colour(hsv[i],n)
+        elif grade > 2:
+            n = grade - 2
+            hsv[i] = lighten_colour(hsv[i],n)
+    return hsv
+
 
 def darken_colour(colour,grade=1):
     hue,saturation,value = colour
@@ -276,8 +294,8 @@ def colour_palette(mood, image=None, number=5):
     colours = []
     if image is not None:
         img = cv.imread(image)
-        converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV) #in artistic contexts, hsv or hsl are more commonly used for colouring
-        unique_values = np.unique(converted_image.reshape(-1,3),axis=0)
+        #converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV) #in artistic contexts, hsv or hsl are more commonly used for colouring
+        unique_values = np.unique(img.reshape(-1,3),axis=0)
         n = n//2
         for i in range(n):
             colours.append(unique_values[np.random.randint(0,len(unique_values))])
@@ -292,15 +310,18 @@ def colour_palette(mood, image=None, number=5):
 def edit_image(image, mood):
     if image is not None:
         img = cv.imread(image)
-
+    hsv =cv.cvtColor(img,cv.COLOR_BGR2HSV)
     h, w, _ = img.shape
-    reshaped = img.reshape(-1, 3)
-    processed = soft_light_filter(reshaped,mood)
+    reshaped_bgr = img.reshape(-1, 3)
+    reshaped_hsv = hsv.reshape(-1, 3)
+    #processed = soft_light_filter(reshaped,mood)
+    processed = colour_contrast(reshaped_bgr,reshaped_hsv)
+    processed = cv.cvtColor(processed.reshape(h,w,3),cv.COLOR_HSV2BGR)
     #processed = np.array([
     #    soft_light_filter(pixel, mood)
     #    for pixel in reshaped
     #], dtype=converted_image.dtype)
-    return 'edit_image' + mood, save_img(processed.reshape(h,w,3))
+    return 'edit_image' + mood, save_img(processed)
 
 def save_img(pixels):
     # write the generated numpy image to a temporary file and return its path
@@ -316,7 +337,7 @@ def save_img(pixels):
             media_dir = os.path.join(os.getcwd(), 'media')
         temp_dir = os.path.join(media_dir, 'temp_images')
         os.makedirs(temp_dir, exist_ok=True)
-        filename = f"palette_{uuid.uuid4().hex}.png"
+        filename = f"image_{uuid.uuid4().hex}.png"
         save_path = os.path.join(temp_dir, filename)
 
         cv.imwrite(save_path, pixels)
