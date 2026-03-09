@@ -6,6 +6,7 @@ import io
 import numpy as np
 import cv2 as cv
 from sklearn.cluster import KMeans
+from sklearn.metrics import pairwise_distances
 #from nltk.corpus import stopwords
 stop_words = ['colour']
 import os
@@ -29,7 +30,7 @@ mood_embeddings = mood_data['embeddings']
 #image_param_data = torch.load('embeddings/image.pt',weights_only=False)
 #image_param_embeddings = image_param_data['embeddings']
 mood_colours = {
-    'happy':(30,190,255),
+    'happy':(30,255,190),
     'calm':(60,64,190),
     'angry':(0,190,64),
     'sad':(100,190,64)
@@ -232,15 +233,17 @@ def colour_contrast(bgr,hsv):
     kmeans = KMeans(n_clusters=num_grades).fit(bgr)
     centres = kmeans.cluster_centers_
     labels = kmeans.labels_
+    #rearrange the labels to be in ascending order of centre value
     order = np.argsort(centres[:,0])
     sorted_labels = np.argsort(order)[labels]
     for i in range(len(labels)):
         grade = sorted_labels[i]
+        #hsv[i] = (0,0,50*grade)
         if grade < 2:
-            n = grade + 1
+            n = 2-grade
             hsv[i] = darken_colour(hsv[i],n)
         elif grade > 2:
-            n = grade - 2
+            n = grade-2
             hsv[i] = lighten_colour(hsv[i],n)
     return hsv
 
@@ -248,14 +251,16 @@ def colour_contrast(bgr,hsv):
 def darken_colour(colour,grade=1):
     hue,saturation,value = colour
     if grade==2:
-        hue += 90
+        if hue >=90:
+            hue -= 90
+        else:
+            hue += 90
     else:
         if hue<=30 or hue >150: #if colour between blue to yellow (including magenta, red)
-            hue -= 15
+            hue = (hue-15)%180
         else: #if colour between yellow and blue (including green, cyan)
             hue += 15
-    hue = hue%180
-    change_scale = 10*grade
+    change_scale = 20*grade
     saturation = min(255,saturation+change_scale)
     value = max(0,value-change_scale)
     return (hue,saturation,value)
@@ -263,14 +268,16 @@ def darken_colour(colour,grade=1):
 def lighten_colour(colour,grade=1):
     hue,saturation,value = colour
     if grade==2:
-        hue += 90
+        if hue >=90:
+            hue -= 90
+        else:
+            hue += 90
     else:
         if hue<30 or hue >=150: #if colour between blue to yellow (including magenta, red)
             hue += 15
         else: #if colour between yellow and blue (including green, cyan)
-            hue -= 15
-    hue = hue%180
-    change_scale = 10*grade
+            hue = (hue-15)%180
+    change_scale = 20*grade
     saturation = max(0,saturation-change_scale)
     value = min(255,value+change_scale)
     return (hue,saturation,value)
@@ -312,16 +319,25 @@ def edit_image(image, mood):
         img = cv.imread(image)
     hsv =cv.cvtColor(img,cv.COLOR_BGR2HSV)
     h, w, _ = img.shape
-    reshaped_bgr = img.reshape(-1, 3)
-    reshaped_hsv = hsv.reshape(-1, 3)
-    #processed = soft_light_filter(reshaped,mood)
+    #reshaped_bgr = img.reshape(-1, 3)
+    #reshaped_hsv = hsv.reshape(-1, 3)
+    #processed = soft_light_filter(img,mood)
+    processed = img
+    #processed = soft_light_filter(processed,mood)
+    reshaped_bgr = processed.reshape(-1, 3)
+    reshaped_hsv = processed.reshape(-1,3)
+
     processed = colour_contrast(reshaped_bgr,reshaped_hsv)
-    processed = cv.cvtColor(processed.reshape(h,w,3),cv.COLOR_HSV2BGR)
+    processed = soft_light_filter(processed,mood)
+    final = processed.reshape(h,w,3)
+    #final = cv.cvtColor(final,cv.COLOR_HSV2BGR)
+    #final = soft_light_filter(final,mood)
+
     #processed = np.array([
     #    soft_light_filter(pixel, mood)
     #    for pixel in reshaped
     #], dtype=converted_image.dtype)
-    return 'edit_image' + mood, save_img(processed)
+    return 'edit_image' + mood, save_img(final)
 
 def save_img(pixels):
     # write the generated numpy image to a temporary file and return its path
