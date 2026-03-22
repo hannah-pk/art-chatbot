@@ -5,6 +5,30 @@ from django.db.models import Max, Q
 
 from .models import Conversation
 
+def cleanup_user_image(seconds: int | None = None, dry_run: bool = False):
+    seconds = 1800 #30 minutes
+    cutoff = timezone.now() - timedelta(seconds=seconds)
+    qs = Conversation.objects.filter(user_identity__startswith="user:")
+    qs = qs.annotate(last_msg=Max("messages__created_at"))
+
+    stale = qs.filter(Q(last_msg__lt=cutoff) | Q(last_msg__isnull=True, created_at__lt=cutoff))
+    total = stale.count()
+    if total == 0:
+        return {"found_count": 0, "deleted_count": 0, "deleted_ids": []}
+    if dry_run:
+        ids = list(stale.values_list("id", flat=True))
+        return {"found_count": total, "deleted_count": 0, "deleted_ids": ids}
+    deleted_count = 0
+    for conversation in stale:
+        for m in conversation.messages.exclude(Q(image__isnull=True) | Q(image="")):
+            try:
+                m.image.delete(save=True)
+                delete_count += 1
+            except Exception as e:
+                print(f"faced an issue deleting image from message {m.id}: {e}")
+                continue
+    return {"found_count": total, "deleted_count": delete_count, "deleted_ids": []}
+
 
 def cleanup_anonymous_conversations(seconds: int | None = None, dry_run: bool = False):
     """Delete anonymous conversations older than 1 hour. Returns dict with found_count, deleted_count, deleted_ids (if dry_run)."""
