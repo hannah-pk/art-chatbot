@@ -3,6 +3,7 @@ Django
 django-cors-headers
 djangorestframework
 djangorestframework-simplejwt
+dj_database_url
 PyJWT
 pytz
 sqlparse
