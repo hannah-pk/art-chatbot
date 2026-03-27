@@ -8,7 +8,7 @@ import cv2 as cv
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
 #from nltk.corpus import stopwords
-from .helpers import get_embeddings
+from .helpers import get_embeddings,read_json
 stop_words = ['colour']
 import os
 import uuid
@@ -25,12 +25,8 @@ mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
 
 #image_param_data = torch.load('embeddings/image.pt',weights_only=False)
 #image_param_embeddings = image_param_data['embeddings']
-mood_colours = {
-    'happy':(30,255,190),
-    'calm':(60,64,190),
-    'angry':(0,190,64),
-    'sad':(100,190,64)
-}
+
+mood_colours = read_json('mappings\\mood_colour_mappings.json')
 
 def filter_common_words(text):
     words = text.lower().split()
@@ -94,11 +90,9 @@ def process_request(message, conv, image_file=None):
             return "There was an error processing your image. Please try again."
 
     instruction= r.instruction
-    if instruction is None:
-        instruction = deduce_instruction(message)
-        if instruction is None: #if instruction is still None after trying to deduce the instruction
-            return clarifying_response(), None
-    r.set_instruction(instruction)
+    instruction = deduce_instruction(message)
+    if instruction is not None:
+        r.set_instruction(instruction)
     
     if not r.needs_image:
         image_needed = deduce_image_needed(instruction_embedding, r)
@@ -109,7 +103,8 @@ def process_request(message, conv, image_file=None):
         mood = deduce_mood(message)
         r.add_params('mood', mood)
     
-
+    if r.instruction is None:
+        return clarifying_response(), None
     
     missing_params = r.missing_params()
     if missing_params is None:
@@ -138,6 +133,11 @@ def perform_instruction(request):
         return instruction
 
 def deduce_instruction(message):
+    """
+    Uses cosine similarity to prompt example embeddings to deduce the instruction
+
+    Returns either "edit_image","colour_palette" or None (in the case where the first two have not been deduced with enough certainty)
+    """
     threshold = 0.6
     message_embedding = MODEL.encode([message],normalize_embeddings=True)
     scores = util.cos_sim(message_embedding, example_embeddings)[0]
@@ -146,9 +146,14 @@ def deduce_instruction(message):
 
     if best_score >= threshold:
         return example_labels[best_idx]
-    return None
+    return None 
 
 def deduce_image_needed(message,request):
+    """
+    Looks at keywords to identify whether an image is required for the user's request to be successfully executed
+
+    Returns a boolean value
+    """
     if request.instruction == "edit_image":
         return True
     #threshold = 0.6
@@ -165,6 +170,11 @@ def deduce_image_needed(message,request):
 
 
 def deduce_mood(message):
+    """
+    Uses cosine similarity to mood synonym embeddings to deduce the mood the user wants to achieve
+
+    Returns "happy", "sad", "angry", "sad" or None (in the case that none of the others were identified with enough certainty)
+    """
     threshold = 0.5
     filtered_message = filter_common_words(extract_relevant_words(message))
     print(filtered_message)
@@ -187,10 +197,13 @@ def deduce_mood(message):
     """     best_mood = mood_names[best_idx]
     if scores[best_idx].item() >= threshold:
         return best_mood """
+    print(mood)
     return mood
 
 def sample_hues(mean,n):
-    hue = np.random.normal(mean,30,n)
+    """
+    """
+    hue = np.random.normal(mean,15,n)
     for i in range(len(hue)):
         hue[i] = int(hue[i]%180)
     return hue
@@ -322,9 +335,10 @@ def edit_image(image, mood):
     #processed = soft_light_filter(processed,mood)
     reshaped_bgr = processed.reshape(-1, 3)
     reshaped_hsv = processed.reshape(-1,3)
-
-    processed = colour_contrast(reshaped_bgr,reshaped_hsv)
-    processed = soft_light_filter(processed,mood)
+    processed = soft_light_filter(reshaped_bgr,mood)
+    #processed = colour_contrast(processed,reshaped_hsv)
+    #processed = colour_contrast(reshaped_bgr,reshaped_hsv)
+    #processed = soft_light_filter(processed,mood)
     final = processed.reshape(h,w,3)
     #final = cv.cvtColor(final,cv.COLOR_HSV2BGR)
     #final = soft_light_filter(final,mood)
