@@ -8,6 +8,7 @@ import cv2 as cv
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
 #from nltk.corpus import stopwords
+from .helpers import get_embeddings
 stop_words = ['colour']
 import os
 import uuid
@@ -17,15 +18,10 @@ nlp = spacy.load("en_core_web_sm")
 
 #stop_words = set(stopwords.words('english'))
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
-MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
-example_data = torch.load('embeddings/intent.pt',weights_only=False)
-example_labels = example_data['labels']
-example_embeddings = example_data['embeddings']
-
-mood_data = torch.load('embeddings/mood.pt',weights_only=False)
-mood_labels = mood_data['labels']
-mood_embeddings = mood_data['embeddings']
+example_labels, example_embeddings = get_embeddings('embeddings/intent.pt')
+mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
 
 #image_param_data = torch.load('embeddings/image.pt',weights_only=False)
 #image_param_embeddings = image_param_data['embeddings']

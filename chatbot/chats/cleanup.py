@@ -23,11 +23,11 @@ def cleanup_user_image(seconds: int | None = None, dry_run: bool = False):
         for m in conversation.messages.exclude(Q(image__isnull=True) | Q(image="")):
             try:
                 m.image.delete(save=True)
-                delete_count += 1
+                deleted_count += 1
             except Exception as e:
                 print(f"faced an issue deleting image from message {m.id}: {e}")
                 continue
-    return {"found_count": total, "deleted_count": delete_count, "deleted_ids": []}
+    return {"found_count": total, "deleted_count": deleted_count, "deleted_ids": []}
 
 
 def cleanup_anonymous_conversations(seconds: int | None = None, dry_run: bool = False):

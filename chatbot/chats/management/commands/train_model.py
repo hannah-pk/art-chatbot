@@ -2,21 +2,23 @@ from sentence_transformers import SentenceTransformer, util
 import torch
 from django.core.management.base import BaseCommand
 import os
+import json
+from django.apps import apps
 
 output_dir = 'embeddings'
 os.makedirs(output_dir,exist_ok=True)
 
-INTENTS= {
-    "colour_palette":["Please generate a colour palette based off", "Create a colour palette around the theme of", "Give me a colour scheme for a"],
-    "edit_image":["Could you make the shadows more", "Please enhance the", "Can you add a", "Make the colors more", "This image looks a bit flat, how can i fix it?", "Make this picture look more", "make it look"],
-}
+app_path = apps.get_app_config("chats").path
 
-MOODS = {
-    "happy": ["bright", "vibrant", "cheerful", "lively", "joyful", "jubilant", "merry"],
-    "sad": ["muted", "dark", "somber", "gloomy", "dull", "melancholy", "depressing", "dreary", "wistful"],
-    "angry": ["intense", "fiery", "bold", "aggressive", "strong", "striking", "cantankerous", "fierce"],
-    "calm": ["soft", "pastel", "tranquil", "peaceful", "serene", "soothing", "relaxing", "gentle"],
-}
+mappings_dir = 'mappings'
+examples_file= os.path.join(app_path,mappings_dir,'prompt_examples.json') 
+moods_file = os.path.join(app_path,mappings_dir,'mood_synonyms.json')
+
+with open(examples_file,'r') as f:
+    INTENTS= json.load(f)
+
+with open(moods_file,'r') as f:
+    MOODS = json.load(f)
 
 #IMAGE_REQUESTS = ["Please generate a colour palette based off this image", "How can i make this drawing look more cheerful?", "Please make this look darker" ]
     
@@ -36,7 +38,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        self.MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+        self.MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
         instruction = options["instructions"]
         mood = options["mood"]
         if instruction:
@@ -58,8 +60,6 @@ class Command(BaseCommand):
         torch.save({
             'labels': example_to_intent,
             'embeddings': example_embeddings,
-            'model': 'all-MiniLM-L6-v2',
-            'type': 'intent_examples',
         },
         os.path.join(output_dir,'intent.pt')
         )
@@ -78,8 +78,6 @@ class Command(BaseCommand):
         torch.save({
             'labels': mood_names,
             'embeddings': mood_embeddings,
-            'model': 'all-MiniLM-L6-v2',
-            'type': 'mood_examples',
         },
         os.path.join(output_dir,'mood.pt')
         )
