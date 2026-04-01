@@ -4,26 +4,18 @@ from chats.models import Request,Image
 import numpy as np
 import cv2 as cv
 from sklearn.cluster import KMeans
-from sklearn.metrics import pairwise_distances
-#from nltk.corpus import stopwords
-from .helpers import get_embeddings,read_json
-stop_words = ['colour']
+from .helpers import get_embeddings,read_json, get_signed_url
 import urllib.request
 import uuid
-from django.conf import settings
 import spacy
 import cloudinary.uploader as uploader
 nlp = spacy.load("en_core_web_sm")
-
-#stop_words = set(stopwords.words('english'))
+stop_words = ['colour']
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
 MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
 example_labels, example_embeddings = get_embeddings('embeddings/intent.pt')
 mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
-
-#image_param_data = torch.load('embeddings/image.pt',weights_only=False)
-#image_param_embeddings = image_param_data['embeddings']
 
 mood_colours = read_json('mappings\\mood_colour_mappings.json')
 
@@ -38,12 +30,11 @@ def extract_relevant_words(text):
     relevant_words = [word for word, tag in tagged if tag in KEEP_TAGS]
     return ' '.join(relevant_words)
 
-def get_response(message):
-    temp_response = "responding to " + message
-    return temp_response
+def final_response():
+    return "Here you go!"
 
 def clarifying_response():
-    return "Sorry, I'm entirely sure what you are trying to ask for. Please could you rephrase your request in a way that I might understand?"
+    return "Sorry, I'm not entirely sure what you are trying to ask for. Please could you rephrase your request in a way that I might understand?"
 
 def clarify_params(param):
     if param == 'mood':
@@ -71,12 +62,12 @@ def process_request(message):
     Returns:
         Response string from the chatbot
     """
+    #
     conversation = message.conversation
     text = message.content
     image = message.image
-    instruction_half,mood_half = split_text(text)
-    print(instruction_half+"::"+mood_half)
-    instruction_embedding = MODEL.encode([instruction_half], normalize_embeddings=True)
+    instruction_half,_ = split_text(text)
+    #instruction_embedding = MODEL.encode([instruction_half], normalize_embeddings=True)
     
     r = Request.objects.get_or_create(conversation=conversation)[0]
 
@@ -84,11 +75,11 @@ def process_request(message):
     if image:
         try:
             # image_file is already a path to the saved file
-            img_url = image.url
-            r.add_params('image', img_url)
+            url = get_signed_url(image)
+            r.add_params('image', url)
         except Exception as e:
             print(f"Error processing image: {e}")
-            return "There was an error processing your image. Please try again."
+            return "There was an error processing your image. Please try again.", None
 
     instruction= r.instruction
     instruction = deduce_instruction(instruction_half)
@@ -96,7 +87,7 @@ def process_request(message):
         r.set_instruction(instruction)
     
     if not r.needs_image:
-        image_needed = deduce_image_needed(instruction_embedding, r)
+        image_needed = deduce_image_needed(text, r)
         r.set_image_needed(image_needed)
 
     params = r.params
@@ -110,42 +101,38 @@ def process_request(message):
     missing_params = r.missing_params()
     if missing_params is None:
         result = perform_instruction(r)
-        print(f"[DEBUG] process_request: perform_instruction returned {result}, type: {type(result)}")
         # Normalize to a 2-tuple: (response, image_or_None)
         if isinstance(result, (list, tuple)):
             if len(result) >= 2:
-                print(f"[DEBUG] Returning result[0]={result[0]}, result[1]={result[1]}")
                 return result[0], result[1]
             if len(result) == 1:
-                print(f"[DEBUG] Returning result[0]={result[0]}, None")
                 return result[0], None
-        print(f"[DEBUG] Returning result={result}, None")
         return result, None
     else:
-        print(f"[DEBUG] Missing params: {missing_params}")
         return clarify_params(missing_params), None
 
 
 
 def perform_instruction(request):
+    """
+    Performs the instruction contained within the passed-in request parameter, passing in the parameters contained within the request instance
+    """
     instruction = request.instruction
     params = request.params
     request.delete()
-    print(f"[DEBUG] perform_instruction: instruction={instruction}, params={params}")
     if instruction=="edit_image":
         result = edit_image(**params)
-        print(f"[DEBUG] edit_image returned: {result}, type: {type(result)}, len: {len(result) if isinstance(result, (list, tuple)) else 'N/A'}")
         return result
     elif instruction=="colour_palette":
         result = colour_palette(**params)
-        print(f"[DEBUG] colour_palette returned: {result}, type: {type(result)}, len: {len(result) if isinstance(result, (list, tuple)) else 'N/A'}")
         return result
     else:
         return instruction
 
 def deduce_instruction(message):
     """
-    Uses cosine similarity to prompt example embeddings to deduce the instruction
+    Uses cosine similarity to prompt example embeddings to deduce the instruction.
+    Compares entire given message.
 
     Returns either "edit_image","colour_palette" or None (in the case where the first two have not been deduced with enough certainty)
     """
@@ -167,14 +154,8 @@ def deduce_image_needed(message,request):
     """
     if request.instruction == "edit_image":
         return True
-    #threshold = 0.6
     image_needed = False
-    #img_scores = util.cos_sim(msg_embedding,image_param_embeddings)[0]
-    #best_idx = img_scores.argmax().item()
-    #best_score = img_scores[best_idx].item()
-
-    #if best_score >= threshold:
-        #image_needed = True
+    #the current check is very simplistic, may need to refine for future work
     if 'this' in message:
         return True
     return image_needed
@@ -183,12 +164,12 @@ def deduce_image_needed(message,request):
 def deduce_mood(message):
     """
     Uses cosine similarity to mood synonym embeddings to deduce the mood the user wants to achieve
+    Compares the individual words from a filtered version of the given message.
 
     Returns "happy", "calm", "angry", "sad" or None (in the case that none of the others were identified with enough certainty)
     """
     threshold = 0.5
     filtered_message = filter_common_words(extract_relevant_words(message))
-    print(filtered_message)
     words = filtered_message.split()
     mood = None
     highscore = 0
@@ -201,18 +182,11 @@ def deduce_mood(message):
         if best_score >= max(threshold,highscore):
             mood = best_mood
             highscore = best_score
-            
-    #message_embedding = MODEL.encode(filtered_message,normalize_embeddings=True)
-    #scores = util.cos_sim(message_embedding, mood_embeddings)[0]
-    #best_idx = scores.argmax().item()
-    """     best_mood = mood_names[best_idx]
-    if scores[best_idx].item() >= threshold:
-        return best_mood """
-    print(mood)
     return mood
 
 def sample_hues(mean,n):
     """
+    Samples a random hue from a normal distribution, cycling around the range 0-180
     """
     hue = np.random.normal(mean,15,n)
     for i in range(len(hue)):
@@ -220,6 +194,9 @@ def sample_hues(mean,n):
     return hue
 
 def sample_saturation_or_value(mean,n):
+    """
+    Samples a saturation or value from a normal distribution, clipped between 0 and 255
+    """
     s_or_v = np.random.normal(mean,30,n)
     for i in range(len(s_or_v)):
         x = s_or_v[i]
@@ -231,6 +208,9 @@ def sample_saturation_or_value(mean,n):
     return s_or_v
 
 def sample_colours(mood,n):
+    """
+    Samples n colours that are picked based on the colour associated with the given mood parameter
+    """
     hue_mean, saturation_mean,value_mean = mood_colours[mood]
     hues = sample_hues(hue_mean,n)
     saturations = sample_saturation_or_value(saturation_mean,n)
@@ -238,35 +218,50 @@ def sample_colours(mood,n):
     return np.stack((hues,saturations,values),axis=1)
 
 def generate_colour_palette_image(colours):
+    """
+    Given a list of colours, produces a numpy array that can represent the colours as thick coloured strips in an image
+    """
     img_height=500
     img_width=300
     row_height = img_height//len(colours)
 
+    #initialise image array
     result = np.zeros((row_height * len(colours), img_width, 3), dtype=colours.dtype)
 
+    #assign colours to bars in array
     for i, colour in enumerate(colours):
         result[i*row_height:(i+1)*row_height, :, :] = colour
     return result
 
 def colour_contrast(bgr,hsv):
+    """
+    Uses colour theory to use all the digital parameters of a colour to increase the contrast
+    HSV (hue, saturation, value) is a colour format commonly used in artistic contexts, hence is used in this function
+    """
     num_grades = 5 #5 grades of shading
     merge_threshold = 20
+
+    #kmeans clustering of the image pixel values
     kmeans = KMeans(n_clusters=num_grades).fit(bgr)
     centres = kmeans.cluster_centers_
     labels = kmeans.labels_
+
     #rearrange the labels to be in ascending order of centre value
     sorted_clusters = np.sort(centres)
     order = np.argsort(centres[:,0])
     sorted_labels = np.argsort(order)[labels]
+
+    #merge the most extreme clusters with their neighbouring clusters if the centres are close enough
     dark_distance = np.linalg.norm(abs(sorted_clusters[0]-sorted_clusters[1]))
     if dark_distance < merge_threshold:
         sorted_labels[sorted_labels==0]=1
     light_distance = np.linalg.norm(abs(sorted_clusters[3]-sorted_clusters[4]))
     if light_distance < merge_threshold:
         sorted_labels[sorted_labels==4]=3
+
+    #implement the actual colour contrasting
     for i in range(len(labels)):
         grade = sorted_labels[i]
-        #hsv[i] = (0,0,50*grade)
         if grade < 2:
             n = 2-grade
             hsv[i] = darken_colour(hsv[i],n)
@@ -277,6 +272,9 @@ def colour_contrast(bgr,hsv):
 
 
 def darken_colour(colour,grade=1):
+    """
+    Darkens a pixel by shifting its hue, saturation and brightness, using colour theory
+    """
     hue,saturation,value = colour
     if grade==2:
         if hue >=90:
@@ -284,9 +282,9 @@ def darken_colour(colour,grade=1):
         else:
             hue += 90
     else:
-        if hue<=30 or hue >150: #if colour between blue to yellow (including magenta, red)
+        if hue<=30 or hue >150: #shift down if colour between blue to yellow (including magenta, red)
             hue = (hue-15)%180
-        else: #if colour between yellow and blue (including green, cyan)
+        else: #shift up if colour between yellow and blue (including green, cyan)
             hue += 15
     change_scale = 20*grade
     saturation = min(255,saturation+change_scale)
@@ -294,23 +292,35 @@ def darken_colour(colour,grade=1):
     return (hue,saturation,value)
 
 def lighten_colour(colour,grade=1):
+    """
+    Lightens a pixel by shifting its hue, saturation and brightness, using colour theory
+    """
     hue,saturation,value = colour
-    if grade==2:
+    if grade==2: #brightest shade gets turned into complementary hue
         if hue >=90:
             hue -= 90
         else:
             hue += 90
     else:
-        if hue<30 or hue >=150: #if colour between blue to yellow (including magenta, red)
+        if hue<30 or hue >=150: #hue shifted up slightly if colour between blue to yellow (including magenta, red)
             hue += 15
-        else: #if colour between yellow and blue (including green, cyan)
+        else: #hue shifted down slightly if colour between yellow and blue (including green, cyan)
             hue = (hue-15)%180
     change_scale = 20*grade
-    saturation = max(0,saturation-change_scale)
-    value = min(255,value+change_scale)
+    saturation = max(0,saturation-change_scale) #decrease saturation
+    value = min(255,value+change_scale) #increase brightness
     return (hue,saturation,value)
 
 def soft_light_filter(bgr_img,mood):
+    """
+    Puts the provided image through a soft light filter 
+    Based off the official soft light filter in image editing apps such as Photoshop
+    Base layer (B) = bgr_img
+    Blend layer (A) = mood
+    Calculation: 
+    A<=0.5: C=(2*A-1)*(B-B*B)+B
+    A>0.5: C= (2*A-1)*(SQRT (B)-B) +B
+    """
     #based off the official soft light filter in image editing apps such as Photoshop
     B=bgr_img.astype(np.float32)/255
     F = (cv.cvtColor(np.array([[mood_colours[mood]]],dtype=np.uint8),cv.COLOR_HSV2BGR)/255)[0][0]
@@ -325,11 +335,13 @@ def soft_light_filter(bgr_img,mood):
 
 
 def colour_palette(mood, image=None, number=5):
+    """
+    Generate a colour palette based on the implied mood from the user (and an image if it's provided)
+    """
     n = number*4
     colours = []
     if image is not None:
         img = read_img(image)
-        #converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV) #in artistic contexts, hsv or hsl are more commonly used for colouring
         unique_values = np.unique(img.reshape(-1,3),axis=0)
         n = n//2
         for _ in range(n):
@@ -340,37 +352,26 @@ def colour_palette(mood, image=None, number=5):
     kmeans = KMeans(n_clusters=number).fit(colours)
     result_img = generate_colour_palette_image(kmeans.cluster_centers_).astype(np.uint8)
     bgr = cv.cvtColor(result_img, cv.COLOR_HSV2BGR)
-    return f'colour_palette {mood} {number}', save_img(bgr)
+    return final_response(), save_img(bgr)
 
 def edit_image(image, mood):
+    """
+    Edits the provided image according to the implied mood from the user.
+    """
     img = read_img(image)
-    hsv =cv.cvtColor(img,cv.COLOR_BGR2HSV)
     h, w, _ = img.shape
-    #reshaped_bgr = img.reshape(-1, 3)
-    #reshaped_hsv = hsv.reshape(-1, 3)
-    #processed = soft_light_filter(img,mood)
     processed = img
-    #processed = soft_light_filter(processed,mood)
     reshaped_bgr = processed.reshape(-1, 3)
-    reshaped_hsv = processed.reshape(-1,3)
     processed = soft_light_filter(reshaped_bgr,mood)
     hsv =cv.cvtColor(processed.reshape(h,w,3),cv.COLOR_BGR2HSV).reshape(-1,3)
     processed = colour_contrast(processed,hsv)
-    #processed = colour_contrast(reshaped_bgr,reshaped_hsv)
-    #processed = soft_light_filter(processed,mood)
     final = processed.reshape(h,w,3)
     final = cv.cvtColor(final,cv.COLOR_HSV2BGR)
-    #final = soft_light_filter(final,mood)
-
-    #processed = np.array([
-    #    soft_light_filter(pixel, mood)
-    #    for pixel in reshaped
-    #], dtype=converted_image.dtype)
-    return 'edit_image' + mood, save_img(final)
+    return final_response(), save_img(final)
 
 def read_img(url):
     """
-    Takes an Image instance and gets the image array from the url (accessed through image.url)
+    Takes an Image instance and returns the image array from the url (accessed through image.url)
     """
     response = urllib.request.urlopen(url)
     arr = np.asarray(bytearray(response.read()),dtype=np.uint8)
@@ -378,6 +379,9 @@ def read_img(url):
     return img
 
 def save_img(pixels):
+    """
+    Takes a numpy array, uploads it to Cloudinary and creates (and returns) Image instance for the image
+    """
     # write the generated numpy image to a temporary file and return its path
     try:
         filename = f"image_{uuid.uuid4().hex}"
@@ -388,23 +392,12 @@ def save_img(pixels):
             buffer.tobytes(),
             public_id = filename,
             type="authenticated",
-            sign_url = True
+            resource_type="image"
         )
         image_field = Image.objects.create(
-            url = result["secure_url"],
             public_id = result["public_id"]
         )
         return image_field
-        # media_dir = getattr(settings, 'MEDIA_ROOT', None)
-        # if not media_dir:
-        #     media_dir = os.path.join(os.getcwd(), 'media')
-        # temp_dir = os.path.join(media_dir, 'temp_images')
-        # os.makedirs(temp_dir, exist_ok=True)
-        
-        # save_path = os.path.join(temp_dir, filename)
-
-        cv.imwrite(save_path, pixels)
-        return save_path
     except Exception as e:
         print(f"Failed to write image: {e}")
         return None

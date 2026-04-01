@@ -3,6 +3,11 @@ from chats.models import Conversation, Image
 from django.core.validators import MaxLengthValidator, MinLengthValidator
 
 class Message(models.Model):
+    """
+    Represents a message in the app
+
+    Contains the message text, the reference to an Image object if it has one and information about whether the message is a user prompt or a chatbot response
+    """
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
     created_at = models.DateTimeField(auto_now_add=True)
     content = models.TextField(validators=[MinLengthValidator(3), MaxLengthValidator(200)])
@@ -11,8 +16,3 @@ class Message(models.Model):
 
     def __str__(self):
         return self.content
-    
-    def delete(self):
-        if self.image is not None:
-            self.image.delete() #makes sure that a related image is completely deleted from any databases
-        super().delete()

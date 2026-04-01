@@ -13,6 +13,7 @@ class ChatsConfig(AppConfig):
         import time
         import os
         from django.conf import settings
+        import chats.signals
 
         # Avoid starting the thread multiple times when the autoreloader runs (runserver)
         if os.environ.get('RUN_MAIN') != 'true' and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':

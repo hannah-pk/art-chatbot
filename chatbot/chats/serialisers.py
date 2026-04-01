@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import Conversation, Message, Image
+from .helpers import get_signed_url
 
 class UserSerialiser(serializers.ModelSerializer):
     class Meta:
@@ -20,9 +21,14 @@ class UserSerialiser(serializers.ModelSerializer):
         return user
 
 class ImageSerialiser(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    def get_url(self,image):
+        return get_signed_url(image)
+    
     class Meta:
         model =Image
-        fields=["url"]
+        fields=["id","url"]
 
 class MessageSerialiser(serializers.ModelSerializer):
     image = ImageSerialiser(required=False,allow_null=True)

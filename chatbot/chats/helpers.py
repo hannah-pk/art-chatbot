@@ -4,6 +4,8 @@ from django.apps import apps
 import torch
 import json
 from os import path
+import cloudinary.utils
+import time
 
 app_path = apps.get_app_config("chats").path
 
@@ -25,3 +27,13 @@ def read_json(file_name):
     with open(file_path,'r') as f:
         data = json.load(f)
     return data
+
+def get_signed_url(image,expires_in=300):
+    url,_=cloudinary.utils.cloudinary_url(
+        image.public_id,
+        type="authenticated",
+        sign_url=True,
+        secure=True,
+        expires_at=int(time.time())+expires_in
+    )
+    return url

@@ -12,10 +12,7 @@ examples_file= os.path.join(mappings_dir,'prompt_examples.json')
 moods_file = os.path.join(mappings_dir,'mood_synonyms.json')
 
 INTENTS= read_json(examples_file)
-MOODS = read_json(moods_file)
-
-#IMAGE_REQUESTS = ["Please generate a colour palette based off this image", "How can i make this drawing look more cheerful?", "Please make this look darker" ]
-    
+MOODS = read_json(moods_file)    
 
 
 class Command(BaseCommand):
@@ -68,24 +65,10 @@ class Command(BaseCommand):
                 syn.append(synonym)
                 synonyms_to_moods.append(mood)
         mood_embeddings= self.MODEL.encode(syn,normalize_embeddings=True, convert_to_tensor=True)
-            # centroid = emb.mean(dim=0)
-            # mood_embeddings.append(centroid)
-            # mood_names.append(mood)
-        #mood_embeddings = torch.stack(mood_embeddings)
         torch.save({
             'labels': synonyms_to_moods,
             'embeddings': mood_embeddings,
         },
         os.path.join(output_dir,'mood.pt')
         )
-
-        #image_param_embeddings = MODEL.encode(IMAGE_REQUESTS, normalize_embeddings=True,convert_to_tensor=True)
-
-        #torch.save({
-        #    'embeddings': image_param_embeddings,
-        #    'model': 'all-MiniLM-L6-v2',
-        #    'type': 'image_requests',
-        #},
-        #os.path.join(output_dir,'image.pt')
-        #)
 

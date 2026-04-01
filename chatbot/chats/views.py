@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .helpers import get_identity
 from .tasks import process_request
 import cloudinary.uploader as uploader
+import time
 
 # Create your views here.
 class RegisterView(generics.CreateAPIView):
@@ -80,9 +81,6 @@ class MessageCreateView(generics.CreateAPIView):
         conv_id = self.kwargs['conv_id']
         conversation = get_object_or_404(Conversation, id=conv_id, user_identity=identity)
 
-        # Debug: check if image is in request
-        print(f"Request FILES: {request.FILES}")
-        print(f"Request DATA keys: {request.data.keys()}")
         image_instance = None
         image_file = request.FILES.get('image').read() if request.FILES.get('image') else None
         data = request.data
@@ -91,10 +89,9 @@ class MessageCreateView(generics.CreateAPIView):
             result = uploader.upload(
                 image_file,
                 type="authenticated",
-                sign_url=True
+                resource_type="image"
             )
             image_instance = Image.objects.create(
-                url = result["secure_url"],
                 public_id=result["public_id"]
             )
         # Save user's message (including image if provided)
@@ -103,14 +100,10 @@ class MessageCreateView(generics.CreateAPIView):
             print("Message serializer errors:", serializer.errors)
         serializer.is_valid(raise_exception=True)
         user_message = serializer.save(conversation=conversation, isPrompt=True, image=image_instance)
-        # Debug: check if image was saved
-        print(f"User message image: {user_message.image}")
 
         # Get response (pass image file path)
         result = process_request(user_message)
-        print(f"[DEBUG] process_request result: {result}, type: {type(result)}, len: {len(result) if isinstance(result, (list, tuple)) else 'N/A'}")
         response, image = result
-        print(image)
 
         # Save response (attach image if one was used)
         response_message = Message(

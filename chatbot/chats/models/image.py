@@ -4,9 +4,8 @@ import cloudinary.uploader as uploader
 from django.core.validators import MaxLengthValidator, MinLengthValidator
 
 class Image(models.Model):
-    url = CloudinaryField('image', null=True, blank=True)
+    """
+    Representation of an image that is part of a message.
+    Contains the Cloudinary URL of the image and its public id, which will be useful when eventually deleting the image to maintain user privacy
+    """
     public_id = models.TextField(validators=[MinLengthValidator(3), MaxLengthValidator(200)])
-
-    def delete(self):
-        uploader.destroy(self.public_id, type="authenticated",resource_type="image")
-        super().delete()
