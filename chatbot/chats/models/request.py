@@ -1,6 +1,6 @@
 from django.db import models
 from chats.models import Conversation
-from django.core.validators import RegexValidator, MaxLengthValidator, MinLengthValidator
+from django.core.validators import MaxLengthValidator, MinLengthValidator
 
 target_params = {
     'colour_palette':['mood','image','number'],

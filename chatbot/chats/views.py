@@ -1,12 +1,13 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from .models import Conversation, Message
+from .models import Conversation, Message, Image
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .serialisers import UserSerialiser, ConversationSerialiser, MessageSerialiser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .helpers import get_identity
 from .tasks import process_request
+import cloudinary.uploader as uploader
 
 # Create your views here.
 class RegisterView(generics.CreateAPIView):
@@ -82,24 +83,36 @@ class MessageCreateView(generics.CreateAPIView):
         # Debug: check if image is in request
         print(f"Request FILES: {request.FILES}")
         print(f"Request DATA keys: {request.data.keys()}")
-
+        image_instance = None
+        image_file = request.FILES.get('image').read() if request.FILES.get('image') else None
+        data = request.data
+        if image_file:
+            data.pop('image',None)
+            result = uploader.upload(
+                image_file,
+                type="authenticated",
+                sign_url=True
+            )
+            image_instance = Image.objects.create(
+                url = result["secure_url"],
+                public_id=result["public_id"]
+            )
         # Save user's message (including image if provided)
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             print("Message serializer errors:", serializer.errors)
         serializer.is_valid(raise_exception=True)
-        user_message = serializer.save(conversation=conversation, isPrompt=True)
-        
+        user_message = serializer.save(conversation=conversation, isPrompt=True, image=image_instance)
         # Debug: check if image was saved
         print(f"User message image: {user_message.image}")
 
-        # Get image file path if it exists
-        image_path = user_message.image.path if user_message.image else None
+        # Get response (pass image file path)
+        result = process_request(user_message)
+        print(f"[DEBUG] process_request result: {result}, type: {type(result)}, len: {len(result) if isinstance(result, (list, tuple)) else 'N/A'}")
+        response, image = result
+        print(image)
 
-        # Get AI response (pass image file path)
-        response, image = process_request(request.data.get("content"), conversation, image_path)
-
-        # Save AI response (attach image if one was used)
+        # Save response (attach image if one was used)
         response_message = Message(
             conversation=conversation,
             content=response,

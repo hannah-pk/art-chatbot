@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import api from "../api"
+import api, { refreshAccessToken } from "../api"
 import AuthModal from "../components/AuthModal"
-import { ACCESS_TOKEN } from "../constants"
+import { ACCESS_TOKEN, REFRESH_TOKEN } from "../constants"
 import "../styles/ChatLayout.css"
 
 // Utility function to convert blob URL to File
@@ -41,7 +41,33 @@ function ChatLayout() {
     }, [messages])
 
     useEffect(() => {
-        getConversations()
+        if (isAuthenticated) {
+            getConversations()
+        }
+    }, [isAuthenticated])
+
+    useEffect(() => {
+        const initializeAuth = async () => {
+            const hasAccess = !!localStorage.getItem(ACCESS_TOKEN)
+            const hasRefresh = !!localStorage.getItem(REFRESH_TOKEN)
+
+            if (hasAccess) {
+                setIsAuthenticated(true)
+                return
+            }
+
+            if (hasRefresh) {
+                try {
+                    await refreshAccessToken()
+                    setIsAuthenticated(true)
+                } catch (err) {
+                    console.warn("Refresh token failed", err)
+                    handleLogout()
+                }
+            }
+        }
+
+        initializeAuth()
     }, [])
 
     useEffect(() => {
@@ -67,6 +93,7 @@ function ChatLayout() {
     const getMessages = async () => {
         try {
             const response = await api.get(`/api/chat/${conv_id}/`)
+            console.log(JSON.stringify(response))
             setMessages(response.data)
         } catch (err) {
             if (err?.response?.status === 404) {
@@ -155,6 +182,19 @@ function ChatLayout() {
         setMessages([])
         navigate('/chat')
     }
+
+    useEffect(() => {
+        const onUnauthorized = () => {
+            console.warn("Unauthorized API response: logging out")
+            handleLogout()
+        }
+
+        window.addEventListener('unauthorized', onUnauthorized)
+
+        return () => {
+            window.removeEventListener('unauthorized', onUnauthorized)
+        }
+    }, [])
 
     const [menuOpenId, setMenuOpenId] = useState(null)
 
@@ -318,7 +358,7 @@ function ChatLayout() {
                                 <div key={idx} className={`message ${msg.isPrompt ? "user" : "bot"}`}>
                                     <div className="message-content">
                                         {msg.image && (
-                                            <img src={msg.image} alt="Message" className="message-image" />
+                                            <img src={msg.image.url} alt="Message" className="message-image" />
                                         )}
                                         <p>{msg.content}</p>
                                     </div>

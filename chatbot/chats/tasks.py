@@ -1,8 +1,6 @@
 from sentence_transformers import SentenceTransformer, util
-import torch
 from nltk import pos_tag, word_tokenize
-from chats.models import Request
-import io
+from chats.models import Request,Image
 import numpy as np
 import cv2 as cv
 from sklearn.cluster import KMeans
@@ -10,10 +8,11 @@ from sklearn.metrics import pairwise_distances
 #from nltk.corpus import stopwords
 from .helpers import get_embeddings,read_json
 stop_words = ['colour']
-import os
+import urllib.request
 import uuid
 from django.conf import settings
 import spacy
+import cloudinary.uploader as uploader
 nlp = spacy.load("en_core_web_sm")
 
 #stop_words = set(stopwords.words('english'))
@@ -61,36 +60,38 @@ def split_text(msg):
             return msg[:split_point].strip(), msg[split_point:].strip()
     return msg, ""
 
-def process_request(message, conv, image_file=None):
+def process_request(message):
     """
     Process user request with optional image data.
     Image data is processed in-memory and not stored long-term.
     
     Args:
-        message: Text message from user
-        conv: Conversation object
-        image_file: Optional uploaded image file (InMemoryUploadedFile or similar)
+        message: Message from user (including text content and image)
     
     Returns:
         Response string from the chatbot
     """
-    instruction_half,mood_half = split_text(message)
+    conversation = message.conversation
+    text = message.content
+    image = message.image
+    instruction_half,mood_half = split_text(text)
     print(instruction_half+"::"+mood_half)
     instruction_embedding = MODEL.encode([instruction_half], normalize_embeddings=True)
     
-    r = Request.objects.get_or_create(conversation=conv)[0]
+    r = Request.objects.get_or_create(conversation=conversation)[0]
 
     # Process image if provided, even if not necessarily needed
-    if image_file:
+    if image:
         try:
             # image_file is already a path to the saved file
-            r.add_params('image', image_file)
+            img_url = image.url
+            r.add_params('image', img_url)
         except Exception as e:
             print(f"Error processing image: {e}")
             return "There was an error processing your image. Please try again."
 
     instruction= r.instruction
-    instruction = deduce_instruction(message)
+    instruction = deduce_instruction(instruction_half)
     if instruction is not None:
         r.set_instruction(instruction)
     
@@ -100,7 +101,7 @@ def process_request(message, conv, image_file=None):
 
     params = r.params
     if params.get("mood") is None:
-        mood = deduce_mood(message)
+        mood = deduce_mood(text)
         r.add_params('mood', mood)
     
     if r.instruction is None:
@@ -109,14 +110,19 @@ def process_request(message, conv, image_file=None):
     missing_params = r.missing_params()
     if missing_params is None:
         result = perform_instruction(r)
+        print(f"[DEBUG] process_request: perform_instruction returned {result}, type: {type(result)}")
         # Normalize to a 2-tuple: (response, image_or_None)
         if isinstance(result, (list, tuple)):
             if len(result) >= 2:
+                print(f"[DEBUG] Returning result[0]={result[0]}, result[1]={result[1]}")
                 return result[0], result[1]
             if len(result) == 1:
+                print(f"[DEBUG] Returning result[0]={result[0]}, None")
                 return result[0], None
+        print(f"[DEBUG] Returning result={result}, None")
         return result, None
     else:
+        print(f"[DEBUG] Missing params: {missing_params}")
         return clarify_params(missing_params), None
 
 
@@ -125,10 +131,15 @@ def perform_instruction(request):
     instruction = request.instruction
     params = request.params
     request.delete()
+    print(f"[DEBUG] perform_instruction: instruction={instruction}, params={params}")
     if instruction=="edit_image":
-        return edit_image(**params)
+        result = edit_image(**params)
+        print(f"[DEBUG] edit_image returned: {result}, type: {type(result)}, len: {len(result) if isinstance(result, (list, tuple)) else 'N/A'}")
+        return result
     elif instruction=="colour_palette":
-        return colour_palette(**params)
+        result = colour_palette(**params)
+        print(f"[DEBUG] colour_palette returned: {result}, type: {type(result)}, len: {len(result) if isinstance(result, (list, tuple)) else 'N/A'}")
+        return result
     else:
         return instruction
 
@@ -173,7 +184,7 @@ def deduce_mood(message):
     """
     Uses cosine similarity to mood synonym embeddings to deduce the mood the user wants to achieve
 
-    Returns "happy", "sad", "angry", "sad" or None (in the case that none of the others were identified with enough certainty)
+    Returns "happy", "calm", "angry", "sad" or None (in the case that none of the others were identified with enough certainty)
     """
     threshold = 0.5
     filtered_message = filter_common_words(extract_relevant_words(message))
@@ -239,12 +250,20 @@ def generate_colour_palette_image(colours):
 
 def colour_contrast(bgr,hsv):
     num_grades = 5 #5 grades of shading
+    merge_threshold = 20
     kmeans = KMeans(n_clusters=num_grades).fit(bgr)
     centres = kmeans.cluster_centers_
     labels = kmeans.labels_
     #rearrange the labels to be in ascending order of centre value
+    sorted_clusters = np.sort(centres)
     order = np.argsort(centres[:,0])
     sorted_labels = np.argsort(order)[labels]
+    dark_distance = np.linalg.norm(abs(sorted_clusters[0]-sorted_clusters[1]))
+    if dark_distance < merge_threshold:
+        sorted_labels[sorted_labels==0]=1
+    light_distance = np.linalg.norm(abs(sorted_clusters[3]-sorted_clusters[4]))
+    if light_distance < merge_threshold:
+        sorted_labels[sorted_labels==4]=3
     for i in range(len(labels)):
         grade = sorted_labels[i]
         #hsv[i] = (0,0,50*grade)
@@ -309,11 +328,11 @@ def colour_palette(mood, image=None, number=5):
     n = number*4
     colours = []
     if image is not None:
-        img = cv.imread(image)
+        img = read_img(image)
         #converted_image = cv.cvtColor(img,cv.COLOR_BGR2HSV) #in artistic contexts, hsv or hsl are more commonly used for colouring
         unique_values = np.unique(img.reshape(-1,3),axis=0)
         n = n//2
-        for i in range(n):
+        for _ in range(n):
             colours.append(unique_values[np.random.randint(0,len(unique_values))])
     mood_based_colours = sample_colours(mood,n)
     for c in mood_based_colours:
@@ -324,8 +343,7 @@ def colour_palette(mood, image=None, number=5):
     return f'colour_palette {mood} {number}', save_img(bgr)
 
 def edit_image(image, mood):
-    if image is not None:
-        img = cv.imread(image)
+    img = read_img(image)
     hsv =cv.cvtColor(img,cv.COLOR_BGR2HSV)
     h, w, _ = img.shape
     #reshaped_bgr = img.reshape(-1, 3)
@@ -336,11 +354,12 @@ def edit_image(image, mood):
     reshaped_bgr = processed.reshape(-1, 3)
     reshaped_hsv = processed.reshape(-1,3)
     processed = soft_light_filter(reshaped_bgr,mood)
-    #processed = colour_contrast(processed,reshaped_hsv)
+    hsv =cv.cvtColor(processed.reshape(h,w,3),cv.COLOR_BGR2HSV).reshape(-1,3)
+    processed = colour_contrast(processed,hsv)
     #processed = colour_contrast(reshaped_bgr,reshaped_hsv)
     #processed = soft_light_filter(processed,mood)
     final = processed.reshape(h,w,3)
-    #final = cv.cvtColor(final,cv.COLOR_HSV2BGR)
+    final = cv.cvtColor(final,cv.COLOR_HSV2BGR)
     #final = soft_light_filter(final,mood)
 
     #processed = np.array([
@@ -349,22 +368,40 @@ def edit_image(image, mood):
     #], dtype=converted_image.dtype)
     return 'edit_image' + mood, save_img(final)
 
+def read_img(url):
+    """
+    Takes an Image instance and gets the image array from the url (accessed through image.url)
+    """
+    response = urllib.request.urlopen(url)
+    arr = np.asarray(bytearray(response.read()),dtype=np.uint8)
+    img = cv.imdecode(arr,cv.IMREAD_COLOR)
+    return img
+
 def save_img(pixels):
     # write the generated numpy image to a temporary file and return its path
     try:
-        """ out_img = pixels
-        if out_img.dtype != np.uint8:
-            out_img = np.clip(out_img, 0, 255).astype(np.uint8)
-        # convert HSV -> BGR for OpenCV
-        bgr = cv.cvtColor(out_img, cv.COLOR_HSV2BGR) """
-
-        media_dir = getattr(settings, 'MEDIA_ROOT', None)
-        if not media_dir:
-            media_dir = os.path.join(os.getcwd(), 'media')
-        temp_dir = os.path.join(media_dir, 'temp_images')
-        os.makedirs(temp_dir, exist_ok=True)
-        filename = f"image_{uuid.uuid4().hex}.png"
-        save_path = os.path.join(temp_dir, filename)
+        filename = f"image_{uuid.uuid4().hex}"
+        success, buffer = cv.imencode(".png",pixels)
+        if not success:
+            raise ValueError("Failed to encode image.")
+        result = uploader.upload(
+            buffer.tobytes(),
+            public_id = filename,
+            type="authenticated",
+            sign_url = True
+        )
+        image_field = Image.objects.create(
+            url = result["secure_url"],
+            public_id = result["public_id"]
+        )
+        return image_field
+        # media_dir = getattr(settings, 'MEDIA_ROOT', None)
+        # if not media_dir:
+        #     media_dir = os.path.join(os.getcwd(), 'media')
+        # temp_dir = os.path.join(media_dir, 'temp_images')
+        # os.makedirs(temp_dir, exist_ok=True)
+        
+        # save_path = os.path.join(temp_dir, filename)
 
         cv.imwrite(save_path, pixels)
         return save_path

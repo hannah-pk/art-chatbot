@@ -16,6 +16,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import dj_database_url
 import os
+import cloudinary
 
 load_dotenv()
 DATABASE_URL = os.getenv("DB_URL")
@@ -148,15 +149,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/images/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'images')
 
+CLOUDINARY_URL="cloudinary://REDACTED:REDACTED@dyf3windv"
+
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': "dyf3windv",
     'API_KEY': "REDACTED",
     'API_SECRET': "REDACTED",
 }
 
+cloudinary.config(
+    cloud_name= "dyf3windv",
+    api_key= "REDACTED",
+    api_secret= "REDACTED"
+)
+
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-CLOUDINARY_URL="cloudinary://REDACTED:REDACTED@dyf3windv"
+
 
 MESSAGE_TAGS = {
     messages.ERROR: 'danger',

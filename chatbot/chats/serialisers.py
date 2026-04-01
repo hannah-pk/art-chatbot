@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Conversation, Message
+from .models import Conversation, Message, Image
 
 class UserSerialiser(serializers.ModelSerializer):
     class Meta:
@@ -19,26 +19,19 @@ class UserSerialiser(serializers.ModelSerializer):
         user = User.objects.create_user(username=username, password=password)
         return user
 
+class ImageSerialiser(serializers.ModelSerializer):
+    class Meta:
+        model =Image
+        fields=["url"]
 
 class MessageSerialiser(serializers.ModelSerializer):
+    image = ImageSerialiser(required=False,allow_null=True)
     class Meta:
         model = Message
         fields = ["id", "conversation", "content", "isPrompt", "created_at", "image"]
         extra_kwargs = {
-            "conversation": {"read_only": True},
-            "image": {"required": False, "allow_null": True}
+            "conversation": {"read_only": True}
         }
-    
-    def to_representation(self, instance):
-        """Override to return image URL on read"""
-        data = super().to_representation(instance)
-        if instance.image:
-            request = self.context.get('request')
-            if request:
-                data['image'] = request.build_absolute_uri(instance.image.url)
-            else:
-                data['image'] = instance.image.url
-        return data
 
 class ConversationSerialiser(serializers.ModelSerializer):
     messages = MessageSerialiser(many=True, read_only=True)

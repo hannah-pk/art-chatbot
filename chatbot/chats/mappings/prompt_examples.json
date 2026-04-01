@@ -1,7 +1,10 @@
 {
     "colour_palette":["Please generate a colour palette based off", 
         "Create a colour palette around the theme of", 
-        "Give me a colour scheme for a"
+        "Give me a colour scheme for a",
+        "What colour combination could",
+        "What colours would",
+        "Any palette suggestions for"
     ],
     "edit_image":["Could you make the shadows more", 
         "How can I make this look more",
@@ -12,6 +15,6 @@
         "Make this picture look more", 
         "make it look",
         "can you edit this",
-        "can you make this look"
+        "can you make it look"
     ]
 }
