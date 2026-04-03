@@ -67,37 +67,42 @@ def process_request(message):
     text = message.content
     image = message.image
     instruction_half,_ = split_text(text)
-    #instruction_embedding = MODEL.encode([instruction_half], normalize_embeddings=True)
     
     r = Request.objects.get_or_create(conversation=conversation)[0]
 
     # Process image if provided, even if not necessarily needed
     if image:
         try:
-            # image_file is already a path to the saved file
+            # get a secure Cloudinary url for the image
             url = get_signed_url(image)
             r.add_params('image', url)
         except Exception as e:
             print(f"Error processing image: {e}")
             return "There was an error processing your image. Please try again.", None
 
+    # get the instruction that the user wants to be performed
     instruction= r.instruction
     instruction = deduce_instruction(instruction_half)
     if instruction is not None:
         r.set_instruction(instruction)
     
+    # detect from the message content whether the instruction should require an image
     if not r.needs_image:
         image_needed = deduce_image_needed(text, r)
         r.set_image_needed(image_needed)
 
+    # detect the parameters that will be needed for the successful execution of the instruction
     params = r.params
     if params.get("mood") is None:
         mood = deduce_mood(text)
         r.add_params('mood', mood)
     
+    #if the current ongoing request has no instruction, ask for further clarification
     if r.instruction is None:
         return clarifying_response(), None
     
+    # check if the request contains enough parameters to successfully perform the instruction
+    # if there are enough, perform the instruction, otherwise ask for further clarification
     missing_params = r.missing_params()
     if missing_params is None:
         result = perform_instruction(r)
@@ -188,7 +193,7 @@ def sample_hues(mean,n):
     """
     Samples a random hue from a normal distribution, cycling around the range 0-180
     """
-    hue = np.random.normal(mean,15,n)
+    hue = np.random.normal(mean,30,n)
     for i in range(len(hue)):
         hue[i] = int(hue[i]%180)
     return hue
@@ -283,7 +288,7 @@ def darken_colour(colour,grade=1):
             hue += 90
     else:
         if hue<=30 or hue >150: #shift down if colour between blue to yellow (including magenta, red)
-            hue = (hue-15)%180
+            hue = (hue-15+180)%180
         else: #shift up if colour between yellow and blue (including green, cyan)
             hue += 15
     change_scale = 20*grade

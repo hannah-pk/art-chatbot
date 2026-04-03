@@ -37,7 +37,7 @@ function ChatLayout() {
     }, [messages]);
 
     useEffect(() => {
-        scrollToBottom()
+        setTimeout(scrollToBottom,0)
     }, [messages])
 
     useEffect(() => {
@@ -93,7 +93,6 @@ function ChatLayout() {
     const getMessages = async () => {
         try {
             const response = await api.get(`/api/chat/${conv_id}/`)
-            console.log(JSON.stringify(response))
             setMessages(response.data)
         } catch (err) {
             if (err?.response?.status === 404) {

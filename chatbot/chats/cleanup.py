@@ -3,9 +3,12 @@ from datetime import timedelta
 from django.conf import settings
 from django.db.models import Max, Q
 
-from .models import Conversation
+from .models import Conversation, Request
 
 def cleanup_user_image(seconds: int | None = None, dry_run: bool = False):
+    """
+    Deletes the user image from the database and also resets (deletes any ongoing requests for that conversation)
+    """
     seconds = 1800 #30 minutes
     cutoff = timezone.now() - timedelta(seconds=seconds)
     qs = Conversation.objects.filter(user_identity__startswith="user:")
@@ -20,9 +23,11 @@ def cleanup_user_image(seconds: int | None = None, dry_run: bool = False):
         return {"found_count": total, "deleted_count": 0, "deleted_ids": ids}
     deleted_count = 0
     for conversation in stale:
-        for m in conversation.messages.exclude(Q(image__isnull=True) | Q(image="")):
+        request = Request.objects.filter(conversation=conversation)
+        request.delete()
+        for m in conversation.messages.exclude(image__isnull=True):
             try:
-                m.image.delete(save=True)
+                m.image.delete()
                 deleted_count += 1
             except Exception as e:
                 print(f"faced an issue deleting image from message {m.id}: {e}")
