@@ -1,4 +1,7 @@
-from nltk import pos_tag, word_tokenize
+# import psutil,os
+# process = psutil.Process(os.getpid())
+# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+
 from chats.models import Request,Image
 import numpy as np
 import cv2 as cv
@@ -9,6 +12,8 @@ import urllib.request
 import uuid
 import spacy
 import cloudinary.uploader as uploader
+
+#print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 from pathlib import Path
 
@@ -27,6 +32,8 @@ mood_colours = read_json('mappings/mood_colour_mappings.json')
 
 tokenizer = None
 model = None
+
+#print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 def get_tokenizer():
     global tokenizer
@@ -55,9 +62,8 @@ def filter_common_words(text):
     return ' '.join(filtered_words)
 
 def extract_relevant_words(text):
-    tokens = word_tokenize(text)
-    tagged = pos_tag(tokens)
-    relevant_words = [word for word, tag in tagged if tag in KEEP_TAGS]
+    doc = nlp(text)
+    relevant_words = [token.text for token in doc if token.pos_ in {"ADJ", "NOUN", "PROPN"}]
     return ' '.join(relevant_words)
 
 def final_response():
