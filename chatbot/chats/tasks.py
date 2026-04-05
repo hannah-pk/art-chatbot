@@ -37,12 +37,14 @@ def get_tokenizer():
     if tokenizer is None:
         from transformers import AutoTokenizer
         tokenizer = AutoTokenizer.from_pretrained(ONNX_MODEL_PATH)
+    return tokenizer
 
 def get_model():
     global model
     if model is None:
         from optimum.onnxruntime import ORTModelForFeatureExtraction
         model = ORTModelForFeatureExtraction.from_pretrained(ONNX_MODEL_PATH)
+    return model
 
 def get_nlp():
     global nlp
@@ -52,8 +54,8 @@ def get_nlp():
     return nlp
 
 def encode(texts, normalize=True):
-    inputs = tokenizer(texts, return_tensors='np', padding=True, truncation=True)
-    outputs = model(**inputs)
+    inputs = get_tokenizer()(texts, return_tensors='np', padding=True, truncation=True)
+    outputs = get_model()(**inputs)
     embeddings = outputs.last_hidden_state.mean(axis=1)
     if normalize:
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
