@@ -1,6 +1,6 @@
-# import psutil,os
-# process = psutil.Process(os.getpid())
-# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+import psutil,os
+process = psutil.Process(os.getpid())
+print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 from chats.models import Request,Image
 import numpy as np
@@ -10,20 +10,16 @@ from sklearn.metrics.pairwise import cosine_similarity as cos_sim
 from .helpers import get_embeddings,read_json, get_signed_url
 import urllib.request
 import uuid
-import spacy
-import cloudinary.uploader as uploader
 
-#print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ONNX_MODEL_PATH = str(BASE_DIR / 'onnx_model')
-print(ONNX_MODEL_PATH)
 
 stop_words = ['colour']
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
-nlp = spacy.load("en_core_web_sm")
 
 example_labels, example_embeddings = get_embeddings('embeddings/intent.pt')
 mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
@@ -32,8 +28,9 @@ mood_colours = read_json('mappings/mood_colour_mappings.json')
 
 tokenizer = None
 model = None
+nlp = None
 
-#print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 def get_tokenizer():
     global tokenizer
@@ -46,6 +43,13 @@ def get_model():
     if model is None:
         from optimum.onnxruntime import ORTModelForFeatureExtraction
         model = ORTModelForFeatureExtraction.from_pretrained(ONNX_MODEL_PATH)
+
+def get_nlp():
+    global nlp
+    if nlp is None:
+        import spacy
+        nlp = spacy.load("en_core_web_sm")
+    return nlp
 
 def encode(texts, normalize=True):
     inputs = tokenizer(texts, return_tensors='np', padding=True, truncation=True)
@@ -62,7 +66,7 @@ def filter_common_words(text):
     return ' '.join(filtered_words)
 
 def extract_relevant_words(text):
-    doc = nlp(text)
+    doc = get_nlp()(text)
     relevant_words = [token.text for token in doc if token.pos_ in {"ADJ", "NOUN", "PROPN"}]
     return ' '.join(relevant_words)
 
@@ -79,7 +83,7 @@ def clarify_params(param):
         return "It seems I'm missing an image. Could you please provide the image?"
 
 def split_text(msg):
-    doc = nlp(msg)
+    doc = get_nlp()(msg)
     # Find the root verb, split after its direct object or complement
     for token in doc:
         if token.dep_ in ("acomp", "advmod", "prep") and token.i > 0:
@@ -425,6 +429,7 @@ def save_img(pixels):
     """
     # write the generated numpy image to a temporary file and return its path
     try:
+        import cloudinary.uploader as uploader
         filename = f"image_{uuid.uuid4().hex}"
         success, buffer = cv.imencode(".png",pixels)
         if not success:
