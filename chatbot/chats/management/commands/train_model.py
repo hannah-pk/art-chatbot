@@ -7,9 +7,8 @@ from chats.helpers import read_json
 output_dir = 'embeddings'
 os.makedirs(output_dir,exist_ok=True)
 
-mappings_dir = 'mappings'
-examples_file= os.path.join(mappings_dir,'prompt_examples.json') 
-moods_file = os.path.join(mappings_dir,'mood_synonyms.json')
+examples_file= 'mappings/prompt_examples.json'
+moods_file = 'mappings/mood_synonyms.json'
 
 INTENTS= read_json(examples_file)
 MOODS = read_json(moods_file)    

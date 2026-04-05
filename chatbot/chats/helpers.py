@@ -3,7 +3,6 @@ from django.shortcuts import get_object_or_404
 from django.apps import apps
 import torch
 import json
-from os import path
 import cloudinary.utils
 import time
 
@@ -23,7 +22,7 @@ def get_embeddings(file_name):
     return data['labels'],data['embeddings']
 
 def read_json(file_name):
-    file_path = path.join(app_path,file_name)
+    file_path = app_path+"/"+file_name
     with open(file_path,'r') as f:
         data = json.load(f)
     return data
