@@ -28,12 +28,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-kbiw=xc)hd^5pko4bm8zjk_a&1neq9-9k!@#85qer9nphhoc*i'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ["*"]
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True 
+
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES":(
@@ -64,14 +67,15 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'chatbot.urls'
@@ -101,9 +105,10 @@ DATABASES = {
     'default': dj_database_url.parse(DATABASE_URL,conn_max_age=600)
 }
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 #{'ENGINE': 'django.db.backends.sqlite3','NAME': BASE_DIR / 'db.sqlite3',}
-REDIS_URL = "redis://127.0.0.1:6379"
-CHAT_TTL = 360
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -149,18 +154,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/images/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'images')
 
-CLOUDINARY_URL="cloudinary://REDACTED:REDACTED@dyf3windv"
+CLOUDINARY_URL=os.getenv("CLOUDINARY_URL")
 
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': "dyf3windv",
-    'API_KEY': "REDACTED",
-    'API_SECRET': "REDACTED",
+    'CLOUD_NAME': os.getenv("CLOUD_NAME"),
+    'API_KEY': os.getenv("API_KEY"),
+    'API_SECRET': os.getenv("API_SECRET"),
 }
 
 cloudinary.config(
-    cloud_name= "dyf3windv",
-    api_key= "REDACTED",
-    api_secret= "REDACTED"
+    cloud_name= os.getenv("CLOUD_NAME"),
+    api_key= os.getenv("API_KEY"),
+    api_secret= os.getenv("API_SECRET")
 )
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
@@ -171,8 +176,7 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS= os.getenv("FRONTEND_URL","http://127.0.0.1:5173,http://localhost:5173").split(",")
 CORS_ALLOW_CREDENTIALS = True
 
-# Number of days after which anonymous conversations are considered stale and removed
-# Can be overridden via environment variable ANON_CONVERSATION_EXPIRY_DAYS
