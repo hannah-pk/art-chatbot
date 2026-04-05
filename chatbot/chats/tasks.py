@@ -17,7 +17,7 @@ MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 example_labels, example_embeddings = get_embeddings('embeddings/intent.pt')
 mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
 
-mood_colours = read_json('mappings\\mood_colour_mappings.json')
+mood_colours = read_json('mappings/mood_colour_mappings.json')
 
 def filter_common_words(text):
     words = text.lower().split()
