@@ -1,6 +1,6 @@
-import psutil,os
-process = psutil.Process(os.getpid())
-print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+# import psutil,os
+# process = psutil.Process(os.getpid())
+# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 from chats.models import Request,Image
 import numpy as np
@@ -11,7 +11,7 @@ from .helpers import get_embeddings,read_json, get_signed_url
 import urllib.request
 import uuid
 
-print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 from pathlib import Path
 
@@ -30,7 +30,7 @@ tokenizer = None
 model = None
 nlp = None
 
-print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
 
 def get_tokenizer():
     global tokenizer
