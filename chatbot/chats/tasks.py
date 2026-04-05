@@ -1,23 +1,53 @@
-from sentence_transformers import SentenceTransformer, util
 from nltk import pos_tag, word_tokenize
 from chats.models import Request,Image
 import numpy as np
 import cv2 as cv
 from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import cosine_similarity as cos_sim
 from .helpers import get_embeddings,read_json, get_signed_url
 import urllib.request
 import uuid
 import spacy
 import cloudinary.uploader as uploader
-nlp = spacy.load("en_core_web_sm")
+
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+ONNX_MODEL_PATH = str(BASE_DIR / 'onnx_model')
+print(ONNX_MODEL_PATH)
+
 stop_words = ['colour']
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
-MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+nlp = spacy.load("en_core_web_sm")
 
 example_labels, example_embeddings = get_embeddings('embeddings/intent.pt')
 mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
 
 mood_colours = read_json('mappings/mood_colour_mappings.json')
+
+tokenizer = None
+model = None
+
+def get_tokenizer():
+    global tokenizer
+    if tokenizer is None:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(ONNX_MODEL_PATH)
+
+def get_model():
+    global model
+    if model is None:
+        from optimum.onnxruntime import ORTModelForFeatureExtraction
+        model = ORTModelForFeatureExtraction.from_pretrained(ONNX_MODEL_PATH)
+
+def encode(texts, normalize=True):
+    inputs = tokenizer(texts, return_tensors='np', padding=True, truncation=True)
+    outputs = model(**inputs)
+    embeddings = outputs.last_hidden_state.mean(axis=1)
+    if normalize:
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        embeddings = embeddings / norms
+    return embeddings
 
 def filter_common_words(text):
     words = text.lower().split()
@@ -142,8 +172,8 @@ def deduce_instruction(message):
     Returns either "edit_image","colour_palette" or None (in the case where the first two have not been deduced with enough certainty)
     """
     threshold = 0.6
-    message_embedding = MODEL.encode([message],normalize_embeddings=True)
-    scores = util.cos_sim(message_embedding, example_embeddings)[0]
+    message_embedding = encode([message],normalize=True)
+    scores = cos_sim(message_embedding, example_embeddings)[0]
     best_idx = scores.argmax().item()
     best_score = scores[best_idx].item()
 
@@ -179,8 +209,8 @@ def deduce_mood(message):
     mood = None
     highscore = 0
     for word in words:
-        word_embedding = MODEL.encode([word],normalize_embeddings=True)
-        word_scores = util.cos_sim(word_embedding, mood_embeddings)[0]
+        word_embedding = encode([word],normalize=True)
+        word_scores = cos_sim(word_embedding, mood_embeddings)[0]
         best_idx = word_scores.argmax().item()
         best_score = word_scores[best_idx].item()
         best_mood = mood_labels[best_idx]

@@ -14,6 +14,9 @@ class ChatsConfig(AppConfig):
         import os
         from django.conf import settings
         import chats.signals
+        from .tasks import get_tokenizer,get_model
+        get_tokenizer()
+        get_model()
 
         # Avoid starting the thread multiple times when the autoreloader runs (runserver)
         if os.environ.get('RUN_MAIN') != 'true' and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
