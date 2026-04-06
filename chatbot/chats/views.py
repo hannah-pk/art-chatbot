@@ -8,7 +8,6 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .helpers import get_identity
 from .tasks import process_request
 import cloudinary.uploader as uploader
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 
 @api_view(['GET'])
