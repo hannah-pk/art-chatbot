@@ -80,7 +80,7 @@
 
 .auth-modal-content input:focus {
     outline: none;
-    border-color: #4CAF50;
+    border-color: #704caf;
     box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
@@ -91,7 +91,7 @@
 
 .auth-modal-content button[type="submit"] {
     padding: 12px;
-    background-color: #4CAF50;
+    background-color: #754caf;
     color: white;
     border: none;
     border-radius: 6px;
@@ -103,7 +103,7 @@
 }
 
 .auth-modal-content button[type="submit"]:hover:not(:disabled) {
-    background-color: #45a049;
+    background-color: #6f45a0;
 }
 
 .auth-modal-content button[type="submit"]:disabled {
@@ -125,7 +125,7 @@
 .auth-modal-link {
     background: none;
     border: none;
-    color: #4CAF50;
+    color: #724caf;
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
@@ -135,5 +135,5 @@
 }
 
 .auth-modal-link:hover {
-    color: #45a049;
+    color: #5745a0;
 }

@@ -28,7 +28,7 @@
 .new-chat-btn {
     width: 100%;
     padding: 10px;
-    background-color: #4CAF50;
+    background-color: #754caf;
     color: white;
     border: none;
     border-radius: 6px;
@@ -39,7 +39,7 @@
 }
 
 .new-chat-btn:hover {
-    background-color: #45a049;
+    background-color: #5745a0;
 }
 
 .conversations-list {
@@ -74,7 +74,7 @@
 
 .conversations-list li.active {
     background-color: #e8f5e9;
-    border-color: #4CAF50;
+    border-color: #664caf;
 }
 
 .conversations-list .title {
@@ -168,7 +168,7 @@
 }
 
 .message.user .message-content {
-    background-color: #4CAF50;
+    background-color: #6f4caf;
     color: white;
 }
 
@@ -218,7 +218,7 @@
 
 .message-input:focus {
     outline: none;
-    border-color: #4CAF50;
+    border-color: #7a4caf;
     box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
@@ -229,7 +229,7 @@
 
 .send-btn {
     padding: 12px 24px;
-    background-color: #4CAF50;
+    background-color: #6a4caf;
     color: white;
     border: none;
     border-radius: 6px;
@@ -240,7 +240,7 @@
 }
 
 .send-btn:hover:not(:disabled) {
-    background-color: #45a049;
+    background-color: #456ea0;
 }
 
 .send-btn:disabled {
@@ -273,11 +273,11 @@
 }
 
 .auth-btn.login-btn {
-    background-color: #4CAF50;
+    background-color: #4c74af;
 }
 
 .auth-btn.login-btn:hover {
-    background-color: #45a049;
+    background-color: #456ea0;
 }
 
 .auth-btn.logout-btn {

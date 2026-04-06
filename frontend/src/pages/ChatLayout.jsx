@@ -31,6 +31,9 @@ function ChatLayout() {
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
+    useEffect(() => {
+        api.get('/api/init/')
+      }, [])
 
     useEffect(() => {
         messageInputRef.current?.focus();

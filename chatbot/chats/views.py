@@ -8,7 +8,15 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .helpers import get_identity
 from .tasks import process_request
 import cloudinary.uploader as uploader
-import time
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def init_session(request):
+    if not request.session.session_key:
+        request.session.create()
+    return Response({'session': request.session.session_key})
 
 # Create your views here.
 class RegisterView(generics.CreateAPIView):
