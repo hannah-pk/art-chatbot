@@ -1,4 +1,4 @@
-workers = 1
-worker_class = "sync"
-threads = 2
+workers = 2
+worker_class = "gthread"
+threads = 4
 timeout = 120  # longer timeout to allow model loading
