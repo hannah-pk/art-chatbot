@@ -180,3 +180,7 @@ CORS_ALLOWED_ORIGINS= os.getenv("FRONTEND_URL","http://127.0.0.1:5173,http://loc
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = os.getenv("FRONTEND_URL","http://127.0.0.1:5173,http://localhost:5173").split(",")
+
+# This tells Django it is behind a proxy and to trust the headers Render sends
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
