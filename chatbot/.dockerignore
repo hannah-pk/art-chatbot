@@ -1,0 +1,12 @@
+# Ignore local python environment
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Ignore git and local settings
+.git
+.gitignore
+.env
+db.sqlite3
