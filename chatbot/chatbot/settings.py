@@ -36,7 +36,8 @@ DEBUG = False
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True 
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS=["*"]
+#ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES":(
@@ -175,6 +176,6 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS= os.getenv("FRONTEND_URL","http://127.0.0.1:5173,http://localhost:5173").split(",")
 CORS_ALLOW_CREDENTIALS = True
