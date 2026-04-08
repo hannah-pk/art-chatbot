@@ -15,8 +15,10 @@ class ChatsConfig(AppConfig):
         from django.conf import settings
         import chats.signals
 
-        # Avoid starting the thread multiple times when the autoreloader runs (runserver)
-        if os.environ.get('RUN_MAIN') != 'true' and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        # NEW LOGIC: Only skip if we are in the 'interactive' shell or managing migrations
+        # This allows it to run under Gunicorn but not during 'python manage.py migrate'
+        import sys
+        if 'manage.py' in sys.argv and ('migrate' in sys.argv or 'makemigrations' in sys.argv):
             return
 
         try:
