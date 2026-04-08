@@ -104,14 +104,6 @@ def process_request(message):
     Returns:
         Response string from the chatbot
     """
-    #
-    conversation = message.conversation
-    text = message.content
-    image = message.image
-    instruction_half,_ = split_text(text)
-    
-    r = Request.objects.get_or_create(conversation=conversation)[0]
-
     # Process image if provided, even if not necessarily needed
     if image:
         try:
@@ -122,22 +114,31 @@ def process_request(message):
             print(f"Error processing image: {e}")
             return "There was an error processing your image. Please try again.", None
 
-    # get the instruction that the user wants to be performed
-    instruction= r.instruction
-    instruction = deduce_instruction(instruction_half)
-    if instruction is not None:
-        r.set_instruction(instruction)
-    
-    # detect from the message content whether the instruction should require an image
-    if not r.needs_image:
-        image_needed = deduce_image_needed(text, r)
-        r.set_image_needed(image_needed)
 
-    # detect the parameters that will be needed for the successful execution of the instruction
-    params = r.params
-    if params.get("mood") is None:
-        mood = deduce_mood(text)
-        r.add_params('mood', mood)
+    conversation = message.conversation
+    text = message.content
+    image = message.image
+    r = Request.objects.get_or_create(conversation=conversation)[0]
+
+    # get the instruction that the user wants to be performed (only if there is text to be analysed)
+    if text:
+        instruction_half,_ = split_text(text)
+        #instruction can be overwritten at any time
+        instruction = deduce_instruction(instruction_half)
+        if instruction is not None:
+            r.set_instruction(instruction)
+        
+        # detect from the message content whether the instruction should require an image
+        # once it detects an image is needed, that requirement cannot disappear
+        if not r.needs_image:
+            image_needed = deduce_image_needed(text, r)
+            r.set_image_needed(image_needed)
+
+        # detect the parameters that will be needed for the successful execution of the instruction
+        params = r.params
+        if params.get("mood") is None:
+            mood = deduce_mood(text)
+            r.add_params('mood', mood)
     
     #if the current ongoing request has no instruction, ask for further clarification
     if r.instruction is None:
