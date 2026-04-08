@@ -1,6 +1,7 @@
 import { useState } from "react"
 import api from "../api"
 import { ACCESS_TOKEN, REFRESH_TOKEN } from "../constants"
+import "../styles/Modal.css"
 import "../styles/AuthModal.css"
 
 function AuthModal({ isOpen, onClose, onSuccess }) {
@@ -58,12 +59,14 @@ function AuthModal({ isOpen, onClose, onSuccess }) {
     if (!isOpen) return null
 
     return (
-        <div className="auth-modal-overlay" onClick={onClose}>
+        <div className="modal-overlay" onClick={onClose}>
             <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-                <button className="auth-modal-close" onClick={onClose}>×</button>
-
-                <div className="auth-modal-content">
+                <div className="modal-header">
                     <h2>{mode === "login" ? "Login" : "Create Account"}</h2>
+                    <button className="modal-close" onClick={onClose}>×</button>
+                </div>
+
+                <div className="auth-modal-content modal-content">
 
                     {error && <div className="auth-error">{error}</div>}
 

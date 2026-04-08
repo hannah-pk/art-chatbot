@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import api, { refreshAccessToken } from "../api"
 import AuthModal from "../components/AuthModal"
+import TutorialModal from "../components/TutorialModal"
 import { ACCESS_TOKEN, REFRESH_TOKEN } from "../constants"
 import "../styles/ChatLayout.css"
 
@@ -26,6 +27,7 @@ function ChatLayout() {
     const [error, setError] = useState(null)
     const [conversationsLoading, setConversationsLoading] = useState(true)
     const [authModalOpen, setAuthModalOpen] = useState(false)
+    const [tutorialOpen, setTutorialOpen] = useState(false)
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem(ACCESS_TOKEN))
 
     const scrollToBottom = () => {
@@ -282,6 +284,10 @@ function ChatLayout() {
                 onClose={() => setAuthModalOpen(false)}
                 onSuccess={handleAuthSuccess}
             />
+            <TutorialModal
+                isOpen={tutorialOpen}
+                onClose={() => setTutorialOpen(false)}
+            />
 
             {isAuthenticated && (
             <aside className="sidebar">
@@ -338,6 +344,15 @@ function ChatLayout() {
 
             <main className={`chat-main ${isAuthenticated ? '' : 'anon'}`}>
                 <div className="top-action">
+                    <button
+                        type="button"
+                        className="auth-btn small tutorial-btn"
+                        onClick={() => setTutorialOpen(true)}
+                        aria-label="Open tutorial"
+                        title="Tutorial"
+                    >
+                        ?
+                    </button>
                     {isAuthenticated ? (
                         <button onClick={handleLogout} className="auth-btn small logout-btn">
                             Logout
