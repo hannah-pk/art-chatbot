@@ -105,6 +105,7 @@ def process_request(message):
         Response string from the chatbot
     """
     # Process image if provided, even if not necessarily needed
+    image = message.image
     if image:
         try:
             # get a secure Cloudinary url for the image
@@ -117,7 +118,6 @@ def process_request(message):
 
     conversation = message.conversation
     text = message.content
-    image = message.image
     r = Request.objects.get_or_create(conversation=conversation)[0]
 
     # get the instruction that the user wants to be performed (only if there is text to be analysed)
