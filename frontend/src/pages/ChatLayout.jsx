@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useLayoutEffect, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import api, { refreshAccessToken } from "../api"
 import AuthModal from "../components/AuthModal"
@@ -32,31 +32,53 @@ function ChatLayout() {
 
     const scrollToBottom = () => {
         if (messagesEndRef.current) {
-            // Wait for any images to load before scrolling
+            // Wait for any images in the last few messages to load before scrolling
             const container = messagesEndRef.current.closest('.messages-container');
-            const images = container?.querySelectorAll('img.message-image');
-            if (images && images.length > 0) {
-                const imagePromises = Array.from(images).map(img => {
+            // Only check the last 2 messages (user + bot response) for new images
+            const recentMessages = container?.querySelectorAll('.message');
+            const recentImages = [];
+            if (recentMessages && recentMessages.length >= 2) {
+                // Check the last 2 messages for images
+                for (let i = Math.max(0, recentMessages.length - 2); i < recentMessages.length; i++) {
+                    const imgs = recentMessages[i].querySelectorAll('img.message-image');
+                    recentImages.push(...imgs);
+                }
+            }
+
+            if (recentImages.length > 0) {
+                console.log('Waiting for', recentImages.length, 'images to load');
+                const imagePromises = recentImages.map((img, index) => {
                     if (img.complete) {
+                        console.log('Image', index, 'already loaded');
                         return Promise.resolve();
                     }
+                    console.log('Image', index, 'not loaded, waiting...');
                     return new Promise((resolve) => {
-                        img.addEventListener('load', resolve, { once: true });
-                        img.addEventListener('error', resolve, { once: true });
+                        const loadHandler = () => {
+                            console.log('Image', index, 'loaded');
+                            resolve();
+                        };
+                        const errorHandler = () => {
+                            console.log('Image', index, 'error');
+                            resolve();
+                        };
+                        img.addEventListener('load', loadHandler, { once: true });
+                        img.addEventListener('error', errorHandler, { once: true });
                         // Timeout after 5 seconds to avoid hanging
-                        setTimeout(resolve, 5000);
+                        setTimeout(() => {
+                            console.log('Image', index, 'timeout');
+                            resolve();
+                        }, 5000);
                     });
                 });
 
                 Promise.all(imagePromises).then(() => {
-                    requestAnimationFrame(() => {
-                        messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-                    });
-                });
-            } else {
-                requestAnimationFrame(() => {
+                    console.log('All images ready, scrolling');
                     messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
                 });
+            } else {
+                console.log('No new images, scrolling immediately');
+                messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
             }
         }
     }
@@ -68,11 +90,9 @@ function ChatLayout() {
         messageInputRef.current?.focus();
     }, [messages]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         // Scroll after messages update, now handles image loading internally
-        requestAnimationFrame(() => {
-            scrollToBottom()
-        })
+        scrollToBottom()
     }, [messages])
 
     useEffect(() => {
@@ -114,11 +134,9 @@ function ChatLayout() {
     }, [conv_id])
 
     // Scroll to bottom when messages are first loaded
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (messages.length > 0) {
-            requestAnimationFrame(() => {
-                scrollToBottom()
-            })
+            scrollToBottom()
         }
     }, [conv_id, messages.length])
 
