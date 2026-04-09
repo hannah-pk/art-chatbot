@@ -280,11 +280,11 @@
     height: 38px;
     padding: 0;
     border-radius: 50%;
-    background-color: #6a4caf;
+    background-color: #4c4faf;
 }
 
 .tutorial-btn:hover {
-    background-color: #5745a0;
+    background-color: #3f3b8c;
 }
 
 .auth-btn.login-btn {
