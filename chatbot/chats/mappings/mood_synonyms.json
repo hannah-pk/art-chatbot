@@ -1,6 +1,6 @@
 {
-    "happy": ["happy","bright", "vibrant", "cheerful", "lively", "joyful", "jubilant", "merry"],
-    "sad": ["sad","muted", "dark", "somber", "gloomy", "dull", "melancholy", "depressing", "dreary", "wistful"],
-    "angry": ["angry","intense", "fiery", "bold", "aggressive", "strong", "striking", "bloody", "fierce"],
-    "calm": ["calm","soft", "tranquil", "peaceful", "serene", "soothing", "relaxing", "gentle"]
+    "happy": ["happy","bright", "vibrant", "cheerful", "lively", "joyful", "jubilant", "merry","energetic","summer"],
+    "sad": ["sad","muted", "dark", "somber", "gloomy", "dull", "melancholy", "depressing", "dreary", "wistful","winter"],
+    "angry": ["angry","tense", "fiery", "aggressive", "strong", "striking", "bloody", "fierce","autumn"],
+    "calm": ["calm","soft", "tranquil", "peaceful", "serene", "soothing", "relaxing", "gentle","spring"]
 }
