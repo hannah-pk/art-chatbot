@@ -31,7 +31,11 @@ function ChatLayout() {
     const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem(ACCESS_TOKEN))
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+        if (messagesEndRef.current) {
+            requestAnimationFrame(() => {
+                messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
+            })
+        }
     }
     useEffect(() => {
         api.get('/api/init/')
@@ -42,7 +46,11 @@ function ChatLayout() {
     }, [messages]);
 
     useEffect(() => {
-        setTimeout(scrollToBottom,0)
+        // Use requestAnimationFrame for more reliable scrolling after DOM updates
+        requestAnimationFrame(() => {
+            // Small additional delay to ensure images/content have loaded
+            setTimeout(() => scrollToBottom(), 100)
+        })
     }, [messages])
 
     useEffect(() => {
@@ -82,6 +90,15 @@ function ChatLayout() {
             setMessages([])
         }
     }, [conv_id])
+
+    // Scroll to bottom when messages are first loaded
+    useEffect(() => {
+        if (messages.length > 0) {
+            requestAnimationFrame(() => {
+                setTimeout(() => scrollToBottom(), 100)
+            })
+        }
+    }, [conv_id, messages.length])
 
     const getConversations = async () => {
         try {
