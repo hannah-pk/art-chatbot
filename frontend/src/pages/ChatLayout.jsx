@@ -367,7 +367,9 @@ function ChatLayout() {
                     {messages.length === 0 && !conv_id ? (
                         <div className="welcome">
                             <h2>Start a New Conversation</h2>
-                            <p>Create a new chat or select one from the left to begin</p>
+                            <p>Prompt ideas:</p>
+                            <p>"Give me a colour scheme for a happy picnic scene"</p>
+                            <p>"Give this image a more eerie feel"</p>
                         </div>
                     ) : (
                         <div className="messages">

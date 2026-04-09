@@ -104,6 +104,8 @@ def process_request(message):
     Returns:
         Response string from the chatbot
     """
+    conversation = message.conversation
+    r = Request.objects.get_or_create(conversation=conversation)[0]
     # Process image if provided, even if not necessarily needed
     image = message.image
     if image:
@@ -115,11 +117,7 @@ def process_request(message):
             print(f"Error processing image: {e}")
             return "There was an error processing your image. Please try again.", None
 
-
-    conversation = message.conversation
     text = message.content
-    r = Request.objects.get_or_create(conversation=conversation)[0]
-
     # get the instruction that the user wants to be performed (only if there is text to be analysed)
     if text:
         instruction_half,_ = split_text(text)
