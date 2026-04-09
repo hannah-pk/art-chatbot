@@ -32,9 +32,32 @@ function ChatLayout() {
 
     const scrollToBottom = () => {
         if (messagesEndRef.current) {
-            requestAnimationFrame(() => {
-                messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
-            })
+            // Wait for any images to load before scrolling
+            const container = messagesEndRef.current.closest('.messages-container');
+            const images = container?.querySelectorAll('img.message-image');
+            if (images && images.length > 0) {
+                const imagePromises = Array.from(images).map(img => {
+                    if (img.complete) {
+                        return Promise.resolve();
+                    }
+                    return new Promise((resolve) => {
+                        img.addEventListener('load', resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                        // Timeout after 5 seconds to avoid hanging
+                        setTimeout(resolve, 5000);
+                    });
+                });
+
+                Promise.all(imagePromises).then(() => {
+                    requestAnimationFrame(() => {
+                        messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                    });
+                });
+            } else {
+                requestAnimationFrame(() => {
+                    messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+                });
+            }
         }
     }
     useEffect(() => {
@@ -46,10 +69,9 @@ function ChatLayout() {
     }, [messages]);
 
     useEffect(() => {
-        // Use requestAnimationFrame for more reliable scrolling after DOM updates
+        // Scroll after messages update, now handles image loading internally
         requestAnimationFrame(() => {
-            // Small additional delay to ensure images/content have loaded
-            setTimeout(() => scrollToBottom(), 100)
+            scrollToBottom()
         })
     }, [messages])
 
@@ -95,7 +117,7 @@ function ChatLayout() {
     useEffect(() => {
         if (messages.length > 0) {
             requestAnimationFrame(() => {
-                setTimeout(() => scrollToBottom(), 100)
+                scrollToBottom()
             })
         }
     }, [conv_id, messages.length])
