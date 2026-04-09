@@ -1,6 +1,6 @@
 from django.db import models
 from chats.models import Conversation, Image
-from django.core.validators import MaxLengthValidator, MinLengthValidator
+from django.core.validators import MaxLengthValidator
 
 class Message(models.Model):
     """
@@ -10,7 +10,7 @@ class Message(models.Model):
     """
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
     created_at = models.DateTimeField(auto_now_add=True)
-    content = models.TextField(validators=[MinLengthValidator(3), MaxLengthValidator(200)],null=True,blank=True)
+    content = models.TextField(validators=[MaxLengthValidator(200)],null=True,blank=True)
     isPrompt = models.BooleanField(default=True)
     image = models.OneToOneField(Image,on_delete=models.SET_NULL, related_name="message",null=True,default=None)
 
