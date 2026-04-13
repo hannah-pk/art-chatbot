@@ -101,7 +101,12 @@ WSGI_APPLICATION = 'chatbot.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL,conn_max_age=600)
+    'default': dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        engine='django.db.backends.postgresql', 
+        conn_health_checks=True
+        )
 }
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

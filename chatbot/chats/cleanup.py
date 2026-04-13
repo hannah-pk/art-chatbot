@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db.models import Max, Q
 
 from .models import Conversation, Request
+    
 
 def cleanup_user_image(seconds: int | None = None, dry_run: bool = False):
     """
