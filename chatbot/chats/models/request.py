@@ -26,6 +26,9 @@ class Request(models.Model):
         self.instruction = new_instruction
         self.save()
 
+    def get_instruction(self):
+        return self.instruction
+
     def add_params(self,param_name, param):
         """
         Adds a parameter key and value to the dictionary of parameters
@@ -33,12 +36,18 @@ class Request(models.Model):
         self.params[param_name] = param
         self.save()
 
+    def get_params(self):
+        return self.params
+
     def set_image_needed(self,value):
         """
         Sets whether or not an image is needed for this particular request
         """
         self.needs_image = value
         self.save()
+
+    def get_image_needed(self):
+        return self.needs_image
 
     def missing_params(self):
         """

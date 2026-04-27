@@ -128,18 +128,18 @@ def process_request(message):
         
         # detect from the message content whether the instruction should require an image
         # once it detects an image is needed, that requirement cannot disappear
-        if not r.needs_image:
+        if not r.get_image_needed():
             image_needed = deduce_image_needed(text, r)
             r.set_image_needed(image_needed)
 
         # detect the parameters that will be needed for the successful execution of the instruction
-        params = r.params
+        params = r.get_params()
         if params.get("mood") is None:
             mood = deduce_mood(text)
             r.add_params('mood', mood)
     
     #if the current ongoing request has no instruction, ask for further clarification
-    if r.instruction is None:
+    if r.get_instruction() is None:
         return clarifying_response(), None
     
     # check if the request contains enough parameters to successfully perform the instruction
