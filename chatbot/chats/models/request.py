@@ -2,11 +2,6 @@ from django.db import models
 from chats.models import Conversation
 from django.core.validators import MaxLengthValidator, MinLengthValidator
 
-target_params = {
-    'colour_palette':['mood','image','number'],
-    'edit_image': ['image', 'mood']
-}
-
 class Request(models.Model):
     """
     Represents the current ongoing request within a conversation.
