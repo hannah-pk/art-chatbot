@@ -279,7 +279,7 @@ def generate_colour_palette_image(colours):
         result[i*row_height:(i+1)*row_height, :, :] = colour
     return result
 
-def colour_contrast(bgr,hsv):
+def colour_contrast(bgr,h,w):
     """
     Uses colour theory to use all the digital parameters of a colour to increase the contrast
     HSV (hue, saturation, value) is a colour format commonly used in artistic contexts, hence is used in this function
@@ -287,6 +287,7 @@ def colour_contrast(bgr,hsv):
     num_grades = 5 #5 grades of shading
     merge_threshold = 20
 
+    hsv =cv.cvtColor(bgr.reshape(h,w,3),cv.COLOR_BGR2HSV).reshape(-1,3)
     #kmeans clustering of the image pixel values
     kmeans = KMeans(n_clusters=num_grades).fit(bgr)
     centres = kmeans.cluster_centers_
@@ -409,8 +410,7 @@ def edit_image(image, mood):
     processed = img
     reshaped_bgr = processed.reshape(-1, 3)
     processed = soft_light_filter(reshaped_bgr,mood)
-    hsv =cv.cvtColor(processed.reshape(h,w,3),cv.COLOR_BGR2HSV).reshape(-1,3)
-    processed = colour_contrast(processed,hsv)
+    processed = colour_contrast(processed,h,w)
     final = processed.reshape(h,w,3)
     final = cv.cvtColor(final,cv.COLOR_HSV2BGR)
     return final_response(), save_img(final)

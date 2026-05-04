@@ -7,5 +7,6 @@ urlpatterns = [
     path("conversations/<int:conv_id>/delete/", views.ConversationDeleteView.as_view(), name="conversation_delete"),
     path("chat/<int:conv_id>/", views.MessageListView.as_view(), name="chat"),
     path("chat/<int:conv_id>/message/", views.MessageCreateView.as_view(), name="create_message"),
+    path("chat/<int:conv_id>/message/<int:message_id>/delete/", views.MessageDeleteView.as_view(), name="delete_message"),
     path("init/",views.init_session,name="initialise_session")
 ]

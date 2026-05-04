@@ -258,6 +258,19 @@ function ChatLayout() {
     }, [])
 
     const [menuOpenId, setMenuOpenId] = useState(null)
+    const [messageMenuOpenId, setMessageMenuOpenId] = useState(null)
+
+    const handleDeleteMessage = async (messageId) => {
+        if (!window.confirm("Delete this message? This cannot be undone.")) return
+        try {
+            await api.delete(`/api/chat/${conv_id}/message/${messageId}/delete/`)
+            setMessages(messages.filter((msg) => msg.id !== messageId))
+            setMessageMenuOpenId(null)
+        } catch (err) {
+            console.error("Failed to delete message", err)
+            setError("Failed to delete message")
+        }
+    }
 
     const handleImagePaste = async (e) => {
         const items = e.clipboardData?.items
@@ -431,12 +444,32 @@ function ChatLayout() {
                     ) : (
                         <div className="messages">
                             {messages.map((msg, idx) => (
-                                <div key={idx} className={`message ${msg.isPrompt ? "user" : "bot"}`}>
+                                <div key={msg.id ?? idx} className={`message ${msg.isPrompt ? "user" : "bot"}`}>
                                     <div className="message-content">
                                         {msg.image && (
                                             <img src={msg.image.url} alt="Message" className="message-image" />
                                         )}
                                         <p>{msg.content}</p>
+                                        <div className="message-controls">
+                                        <button
+                                            type="button"
+                                            className="message-menu-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setMessageMenuOpenId(messageMenuOpenId === msg.id ? null : msg.id)
+                                            }}
+                                            aria-label="Message actions"
+                                        >
+                                            ⋯
+                                        </button>
+                                        {messageMenuOpenId === msg.id && (
+                                            <div className="message-menu" onClick={(e) => e.stopPropagation()}>
+                                                <button type="button" onClick={() => handleDeleteMessage(msg.id)}>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                     </div>
                                 </div>
                             ))}

@@ -132,8 +132,17 @@ class MessageCreateView(generics.CreateAPIView):
             headers=headers
         )
 
+class MessageDeleteView(generics.DestroyAPIView):
+    serializer_class = MessageSerialiser
+    permission_classes = [AllowAny]
 
+    def get_queryset(self):
+        identity = get_identity(self.request)
+        conv_id = self.kwargs.get('conv_id')
+        return Message.objects.filter(conversation__id=conv_id, conversation__user_identity=identity)
 
-        
-    
+    def delete(self, request, *args, **kwargs):
+        message = get_object_or_404(self.get_queryset(), id=self.kwargs['message_id'])
+        self.perform_destroy(message)
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
