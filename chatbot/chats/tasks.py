@@ -1,11 +1,22 @@
+# import psutil,os
+# process = psutil.Process(os.getpid())
+# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+
 from chats.models import Request,Image
 import numpy as np
 import cv2 as cv
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity as cos_sim
-from .helpers import get_embeddings,read_json, get_signed_url, encode
+from .helpers import get_embeddings,read_json, get_signed_url
 import urllib.request
 import uuid
+
+# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+ONNX_MODEL_PATH = str(BASE_DIR / 'onnx_model')
 
 stop_words = ['colour']
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
@@ -15,7 +26,25 @@ mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
 
 mood_colours = read_json('mappings/mood_colour_mappings.json')
 
+tokenizer = None
+model = None
 nlp = None
+
+# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
+
+def get_tokenizer():
+    global tokenizer
+    if tokenizer is None:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(ONNX_MODEL_PATH)
+    return tokenizer
+
+def get_model():
+    global model
+    if model is None:
+        from optimum.onnxruntime import ORTModelForFeatureExtraction
+        model = ORTModelForFeatureExtraction.from_pretrained(ONNX_MODEL_PATH)
+    return model
 
 def get_nlp():
     global nlp
@@ -23,6 +52,15 @@ def get_nlp():
         import spacy
         nlp = spacy.load("en_core_web_sm")
     return nlp
+
+def encode(texts, normalize=True):
+    inputs = get_tokenizer()(texts, return_tensors='np', padding=True, truncation=True)
+    outputs = get_model()(**inputs)
+    embeddings = outputs.last_hidden_state.mean(axis=1)
+    if normalize:
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        embeddings = embeddings / norms
+    return embeddings
 
 def filter_common_words(text):
     words = text.lower().split()

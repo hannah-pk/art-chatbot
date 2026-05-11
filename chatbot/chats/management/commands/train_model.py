@@ -1,7 +1,8 @@
+from sentence_transformers import SentenceTransformer, util
 import torch
 from django.core.management.base import BaseCommand
 import os
-from chats.helpers import read_json, encode
+from chats.helpers import read_json
 
 output_dir = 'embeddings'
 os.makedirs(output_dir,exist_ok=True)
@@ -27,6 +28,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        self.MODEL = SentenceTransformer('paraphrase-MiniLM-L6-v2')
         instruction = options["instructions"]
         mood = options["mood"]
         if instruction:
@@ -43,7 +45,7 @@ class Command(BaseCommand):
                 examples.append(example)
                 example_to_intent.append(intent)
 
-        example_embeddings = encode(examples,normalize=True)
+        example_embeddings = self.MODEL.encode(examples,normalize_embeddings=True)
     
         torch.save({
             'labels': example_to_intent,
@@ -61,7 +63,7 @@ class Command(BaseCommand):
             for synonym in synonyms:
                 syn.append(synonym)
                 synonyms_to_moods.append(mood)
-        mood_embeddings= encode(syn,normalize=True)
+        mood_embeddings= self.MODEL.encode(syn,normalize_embeddings=True, convert_to_tensor=True)
         torch.save({
             'labels': synonyms_to_moods,
             'embeddings': mood_embeddings,
