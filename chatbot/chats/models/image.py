@@ -1,6 +1,4 @@
 from django.db import models
-from cloudinary.models import CloudinaryField
-import cloudinary.uploader as uploader
 from django.core.validators import MaxLengthValidator, MinLengthValidator
 
 class Image(models.Model):
