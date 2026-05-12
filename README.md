@@ -11,9 +11,8 @@ Built with a Django REST API backend and a React frontend, featuring user authen
 - **User Authentication**: Secure login and registration system using JWT tokens
 - **Conversation Management**: Create, view, update, and delete chat conversations
 - **Real-time Chat Interface**: Interactive messaging with conversation history
-- **Image Processing**: Generate artistic images based on conversation context
-- **Mood-Based Color Mappings**: Dynamic color schemes based on conversation mood
-- **Fast Inference**: ONNX model integration for optimized performance
+- **Image Processing**: Edit artistic images based on conversation context
+- **Mood-Based Color Mappings**: Dynamic color schemes based on conversation context
 - **Cloud Storage**: Image storage and management via Cloudinary
 - **Responsive Design**: Modern React frontend with mobile-friendly interface
 
@@ -25,7 +24,6 @@ Built with a Django REST API backend and a React frontend, featuring user authen
 - **JWT Authentication**: Secure token-based auth
 - **PostgreSQL**: Database (via dj-database-url)
 - **Cloudinary**: Media storage and management
-- **ONNX Runtime**: Optimized model inference
 - **HuggingFace Transformers**: AI language model integration
 - **Spacy**: Natural language processing
 - **Gunicorn**: WSGI server for production
@@ -87,6 +85,22 @@ Built with a Django REST API backend and a React frontend, featuring user authen
    ```
    The backend will be available at `http://localhost:8000`
 
+## Updating the language model and colour constants
+All the relevant mappins can be found and edited within the folder `chats/mappings`.
+- `mood_colour_mappings.json` contains the mood-to-colour mappings, in HSV format
+- `mood_synonyms.json` contains the lists of registered synonyms for the moods
+- `prompt_examples.json` contains the lists of example prompt starters for the available operations in the chatbot.
+
+In case the folder `chats/miniLM` does not exist, it can be loaded with the instruction:
+```bash
+python manage.py load_model
+```
+
+Once all the previous files are as intended, the model can be retrained with the instruction:
+```bash
+python manage.py train_model --instructions --mood
+```
+
 ### Frontend Setup
 
 1. **Navigate to frontend directory**
@@ -104,6 +118,7 @@ Built with a Django REST API backend and a React frontend, featuring user authen
    npm run dev
    ```
    The frontend will be available at `http://localhost:5173` (Vite default)
+
 
 ## Usage
 
