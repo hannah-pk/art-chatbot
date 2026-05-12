@@ -1,22 +1,11 @@
-# import psutil,os
-# process = psutil.Process(os.getpid())
-# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
-
 from chats.models import Request,Image
 import numpy as np
 import cv2 as cv
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity as cos_sim
-from .helpers import get_embeddings,read_json, get_signed_url
+from .helpers import get_embeddings,read_json, get_signed_url,encode
 import urllib.request
 import uuid
-
-# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
-
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-ONNX_MODEL_PATH = str(BASE_DIR / 'onnx_model')
 
 stop_words = ['colour']
 KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
@@ -26,25 +15,7 @@ mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
 
 mood_colours = read_json('mappings/mood_colour_mappings.json')
 
-tokenizer = None
-model = None
 nlp = None
-
-# print(f"Baseline: {process.memory_info().rss / 1024 / 1024:.1f} MB")
-
-def get_tokenizer():
-    global tokenizer
-    if tokenizer is None:
-        from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(ONNX_MODEL_PATH)
-    return tokenizer
-
-def get_model():
-    global model
-    if model is None:
-        from optimum.onnxruntime import ORTModelForFeatureExtraction
-        model = ORTModelForFeatureExtraction.from_pretrained(ONNX_MODEL_PATH)
-    return model
 
 def get_nlp():
     global nlp
@@ -53,14 +24,6 @@ def get_nlp():
         nlp = spacy.load("en_core_web_sm")
     return nlp
 
-def encode(texts, normalize=True):
-    inputs = get_tokenizer()(texts, return_tensors='np', padding=True, truncation=True)
-    outputs = get_model()(**inputs)
-    embeddings = outputs.last_hidden_state.mean(axis=1)
-    if normalize:
-        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        embeddings = embeddings / norms
-    return embeddings
 
 def filter_common_words(text):
     words = text.lower().split()
@@ -183,7 +146,7 @@ def deduce_instruction(message):
     Returns either "edit_image","colour_palette" or None (in the case where the first two have not been deduced with enough certainty)
     """
     threshold = 0.6
-    message_embedding = encode([message],normalize=True)
+    message_embedding = encode([message],normalize_embeddings=True)
     scores = cos_sim(message_embedding, example_embeddings)[0]
     best_idx = scores.argmax().item()
     best_score = scores[best_idx].item()
@@ -220,7 +183,7 @@ def deduce_mood(message):
     mood = None
     highscore = 0
     for word in words:
-        word_embedding = encode([word],normalize=True)
+        word_embedding = encode([word],normalize_embeddings=True)
         word_scores = cos_sim(word_embedding, mood_embeddings)[0]
         best_idx = word_scores.argmax().item()
         best_score = word_scores[best_idx].item()
@@ -370,12 +333,10 @@ def soft_light_filter(bgr_img,mood):
     """
     #based off the official soft light filter in image editing apps such as Photoshop
     B=bgr_img.astype(np.float32)/255
-    F = (cv.cvtColor(np.array([[mood_colours[mood]]],dtype=np.uint8),cv.COLOR_HSV2BGR)/255)[0][0]
-
     
-    R = np.where(F <= 0.5,
-                 B - (1 - 2*F) * B * (1 - B),
-                 B + (2*F - 1) * (np.sqrt(B) - B))
+    R = np.where(mood <= 0.5,
+                 B - (1 - 2*mood) * B * (1 - B),
+                 B + (2*mood - 1) * (np.sqrt(B) - B))
     
     # Convert back to 0-255
     return np.clip(R * 255, 0, 255).astype(np.uint8)
@@ -407,9 +368,9 @@ def edit_image(image, mood):
     """
     img = read_img(image)
     h, w, _ = img.shape
-    processed = img
-    reshaped_bgr = processed.reshape(-1, 3)
-    processed = soft_light_filter(reshaped_bgr,mood)
+    F = (cv.cvtColor(np.array([[mood_colours[mood]]],dtype=np.uint8),cv.COLOR_HSV2BGR)/255)[0][0]
+    processed = img.reshape(-1, 3)
+    processed = soft_light_filter(processed,F)
     processed = colour_contrast(processed,h,w)
     final = processed.reshape(h,w,3)
     final = cv.cvtColor(final,cv.COLOR_HSV2BGR)

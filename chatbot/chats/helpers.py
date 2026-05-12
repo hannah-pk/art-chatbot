@@ -1,12 +1,19 @@
-from .models import Conversation
-from django.shortcuts import get_object_or_404
 from django.apps import apps
 import torch
 import json
 import cloudinary.utils
 import time
+from os import path
+from sentence_transformers import SentenceTransformer
 
 app_path = apps.get_app_config("chats").path
+MODEL_PATH = path.join(app_path,"miniLM")
+
+model = model = SentenceTransformer(MODEL_PATH)
+
+def encode(texts, normalize_embeddings=True):
+    embeddings = model.encode(texts, normalize_embeddings=normalize_embeddings)
+    return embeddings
 
 #establishes identity for user's conversation based on whether they are logged in or not
 def get_identity(request): 
