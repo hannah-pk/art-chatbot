@@ -8,7 +8,6 @@ import urllib.request
 import uuid
 
 stop_words = ['colour']
-KEEP_TAGS = {"JJ", "JJR", "JJS", "NN", "NNS", "NNP", "NNPS"}
 
 example_labels, example_embeddings = get_embeddings('embeddings/intent.pt')
 mood_labels, mood_embeddings = get_embeddings('embeddings/mood.pt')
@@ -83,9 +82,8 @@ def process_request(message):
     text = message.content
     # get the instruction that the user wants to be performed (only if there is text to be analysed)
     if text:
-        instruction_half,_ = split_text(text)
         #instruction can be overwritten at any time
-        instruction = deduce_instruction(instruction_half)
+        instruction = deduce_instruction(text)
         if instruction is not None:
             r.set_instruction(instruction)
         
@@ -145,8 +143,9 @@ def deduce_instruction(message):
 
     Returns either "edit_image","colour_palette" or None (in the case where the first two have not been deduced with enough certainty)
     """
+    instruction_half,_ = split_text(message)
     threshold = 0.6
-    message_embedding = encode([message],normalize_embeddings=True)
+    message_embedding = encode([instruction_half],normalize_embeddings=True)
     scores = cos_sim(message_embedding, example_embeddings)[0]
     best_idx = scores.argmax().item()
     best_score = scores[best_idx].item()
