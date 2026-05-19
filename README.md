@@ -161,47 +161,6 @@ The backend provides a REST API with the following endpoints:
 ### Session
 - `POST /api/init/` - Initialize user session
 
-## Project Structure
-
-```
-art-chatbot/
-├── chatbot/                    # Django backend
-│   ├── chatbot/               # Main Django project
-│   │   ├── settings.py
-│   │   ├── urls.py
-│   │   └── wsgi.py
-│   ├── chats/                 # Main app
-│   │   ├── models/           # Database models
-│   │   ├── views.py          # API views
-│   │   ├── urls.py           # URL routing
-│   │   └── management/       # Custom management commands
-│   ├── embeddings/           # AI model embeddings
-│   ├── onnx_model/           # ONNX model files
-│   ├── requirements.txt      # Python dependencies
-│   └── manage.py
-├── frontend/                  # React frontend
-│   ├── src/
-│   │   ├── components/       # React components
-│   │   ├── pages/           # Page components
-│   │   └── api.js           # API client
-│   ├── package.json          # Node dependencies
-│   └── vite.config.js       # Vite configuration
-└── README.md
-```
-
-## Development
-
-### Running Tests
-```bash
-# Backend tests
-cd chatbot
-python manage.py test
-
-# Frontend tests (if configured)
-cd frontend
-npm test
-```
-
 ### Building for Production
 
 **Backend:**
