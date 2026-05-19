@@ -2,7 +2,7 @@
 
 ## Description
 
-An AI-powered art chatbot application that enables users to engage in interactive conversations and generate artistic images based on their dialogue. The application combines natural language processing with image generation capabilities to create a unique creative experience.
+An AI-powered art chatbot application that enables users to engage in interactive conversations and generate/edit images based on their dialogue. The application combines natural language processing with image generation capabilities to create a unique creative experience.
 
 Built with a Django REST API backend and a React frontend, featuring user authentication, conversation management, and image processing.
 
@@ -156,11 +156,10 @@ The backend provides a REST API with the following endpoints:
 ### Messages
 - `GET /api/chat/<conv_id>/` - Get all messages in a conversation
 - `POST /api/chat/<conv_id>/message/` - Send a new message
+- `DELETE /api/chat/<conv_id>/message/` - Delete a message
 
 ### Session
 - `POST /api/init/` - Initialize user session
-
-All endpoints require authentication except token endpoints.
 
 ## Project Structure
 
@@ -225,15 +224,3 @@ Key environment variables for production:
 - `DB_URL` - Database connection string
 - `ALLOWED_HOSTS` - Comma-separated list of allowed hosts
 - `CLOUDINARY_URL` - Cloudinary configuration
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Support
-
-For questions or issues, please open an issue on the GitHub repository.
