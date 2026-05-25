@@ -86,15 +86,16 @@ Built with a Django REST API backend and a React frontend, featuring user authen
    The backend will be available at `http://localhost:8000`
 
 ## Updating the language model and colour constants
-All the relevant mappins can be found and edited within the folder `chats/mappings`.
-- `mood_colour_mappings.json` contains the mood-to-colour mappings, in HSV format
-- `mood_synonyms.json` contains the lists of registered synonyms for the moods
-- `prompt_examples.json` contains the lists of example prompt starters for the available operations in the chatbot.
 
 In case the folder `chats/miniLM` does not exist, it can be loaded with the instruction:
 ```bash
 python manage.py load_model
 ```
+
+All the relevant mappings can be found and edited within the folder `chats/mappings`.
+- `mood_colour_mappings.json` contains the mood-to-colour mappings, in HSV format
+- `mood_synonyms.json` contains the lists of registered synonyms for the moods
+- `prompt_examples.json` contains the lists of example prompt starters for the available operations in the chatbot.
 
 Once all the previous files are as intended, the model can be retrained with the instruction:
 ```bash
