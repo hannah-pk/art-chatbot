@@ -375,3 +375,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# to ensure minimal space taken up in repo
+**/miniLM/*

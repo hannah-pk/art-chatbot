@@ -9,11 +9,17 @@ from sentence_transformers import SentenceTransformer
 app_path = apps.get_app_config("chats").path
 MODEL_PATH = path.join(app_path,"miniLM")
 
-model = model = SentenceTransformer(MODEL_PATH)
+model = None
 
 def encode(texts, normalize_embeddings=True):
-    embeddings = model.encode(texts, normalize_embeddings=normalize_embeddings)
+    embeddings = get_model().encode(texts, normalize_embeddings=normalize_embeddings)
     return embeddings
+
+def get_model():
+    global model
+    if model is None:
+        model = SentenceTransformer(MODEL_PATH)
+    return model
 
 #establishes identity for user's conversation based on whether they are logged in or not
 def get_identity(request): 
