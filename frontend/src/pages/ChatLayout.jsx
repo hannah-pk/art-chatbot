@@ -5,6 +5,7 @@ import AuthModal from "../components/AuthModal"
 import TutorialModal from "../components/TutorialModal"
 import { ACCESS_TOKEN, REFRESH_TOKEN } from "../constants"
 import "../styles/ChatLayout.css"
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // Utility function to convert blob URL to File
 const blobUrlToFile = async (blobUrl, filename) => {
@@ -18,6 +19,7 @@ function ChatLayout() {
     const navigate = useNavigate()
     const messagesEndRef = useRef(null)
     const messageInputRef = useRef(null)
+    const imageInputRef = useRef(null)
     const [conversations, setConversations] = useState([])
     const [messages, setMessages] = useState([])
     const [content, setContent] = useState("")
@@ -299,6 +301,18 @@ function ChatLayout() {
         }
     }
 
+    const handleImageUpload = async(e) => {
+        const files = e.target?.files
+        if (!files) return
+
+        for (let file of files) {
+            if (file.type.startsWith('image/')) {
+                await processImageFile(file)
+                break
+            }
+        }
+    }
+
     const processImageFile = async (file) => {
         setImageFile(file)
         // Create preview
@@ -496,6 +510,13 @@ function ChatLayout() {
 
                 <form onSubmit={sendMessage} className="message-form">
                     <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        style={{ display: 'none' }}
+                    />
+                    <input
                         ref={messageInputRef}
                         type="text"
                         value={content}
@@ -507,8 +528,11 @@ function ChatLayout() {
                         disabled={loading}
                         className="message-input"
                     />
+                    <button type="button" onClick={() => imageInputRef.current?.click()}>
+                        <i class="bi bi-upload"></i>
+                    </button>
                     <button type="submit" disabled={loading} className="send-btn">
-                        {loading ? "Sending..." : "Send"}
+                        <i class="bi bi-send-fill"></i>
                     </button>
                 </form>
             </main>
