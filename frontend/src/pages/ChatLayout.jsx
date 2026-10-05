@@ -528,7 +528,7 @@ function ChatLayout() {
                         disabled={loading}
                         className="message-input"
                     />
-                    <button type="button" onClick={() => imageInputRef.current?.click()}>
+                    <button class="upload-btn" type="button" onClick={() => imageInputRef.current?.click()}>
                         <i class="bi bi-upload"></i>
                     </button>
                     <button type="submit" disabled={loading} className="send-btn">
